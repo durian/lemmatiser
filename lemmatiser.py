@@ -15,7 +15,10 @@ USAGE:
   - Loads lexicon file automatically; greek_Haudag.pcases.lemma.lex.
   - Extra word-lemma-tags can be added to extra-wlp.txt (for example
     punctuation).
-  - Produces output in out.txt: word, lemma, full lemma, info
+  - Produces two output files:
+    out-stats.txt: word, lemma, full lemma, info
+                   followed by statistics
+    out-wlt.txt: word lemma tag
 
 greek_Haudag.pcases.lemma.lex (proiel):
 
@@ -55,7 +58,7 @@ greekHDfile = "greek_Haudag.pcases.lemma.lex"
 ghd_words = {}
 filename  = None # test file
 extrafile = "extra-wlt.txt"
-outfile = "out.txt"
+outprefix = "out"
 
 try:
     opts, args = getopt.getopt(sys.argv[1:], "f:l:o:", [])
@@ -68,7 +71,7 @@ for o, a in opts:
     elif o in ("-l"): #specify other lexicon
          greekHDfile = a
     elif o in ("-o"):
-        outfile = a
+        outprefix = a
     else:
         assert False, "unhandled option"
 
@@ -164,6 +167,26 @@ for x in sorted_words[0:3]:
 # Count lemmatisation stats
 lemmatiser_stats = Counter()
 
+# Possible lemmatiser "strategies"
+strategies = {
+    "MLDTHF" : "multi lemmas, different pos tag, highest frequency",
+    "MLSTHF" : "multi lemmas, same pos tag, highest frequency",
+    "MLSTOF" : "multi lemmas, same pos tag, other frequency",
+    "OLDT"   : "one lemma, different pos tag",
+    "OLST"   : "one lemma, same pos tag",
+    "UNKNOWN": "unknown"
+    }
+
+# Prefill Counter
+lemmatiser_stats["lemmatised-correct"] = 0
+lemmatiser_stats["lemmatised-wrong"] = 0
+lemmatiser_stats["unknown"] = 0
+lemmatiser_stats["unknown -wrong"] = 0
+for s in strategies:
+    lemmatiser_stats[strategies[s]] = 0
+    lemmatiser_stats[strategies[s]+" -correct"] = 0
+    lemmatiser_stats[strategies[s]+" -wrong"] = 0
+
 '''
 Lemmatiser strategy:
 
@@ -201,9 +224,9 @@ def lemmatise(word, tf_lemma, tag):
             print( "ONE LEMMA" )
             the_lemma = sorted_lemmas[0]
             if compare_postags(tag, the_lemma.tag):
-                return (sorted_lemmas[0], "one lemma, same pos tag") #"postag_unique")
+                return (sorted_lemmas[0], "OLST") # one lemma, same pos tag
             else:
-                return (sorted_lemmas[0], "one lemma, different pos tag")
+                return (sorted_lemmas[0], "OLDT") # one lemma, different pos tag
         #
         # Not unique, more lemma entries for word
         #
@@ -215,13 +238,13 @@ def lemmatise(word, tf_lemma, tag):
                 print( "POSTAG MATCH", tag, the_lemma )
                 # was this a max_freq tag?
                 if the_lemma.freq == max_freq:
-                    return (the_lemma, "multiple lemmas, same pos tag, highest frequency") #multi_maxf_postag")
+                    return (the_lemma, "MLSTHF") #multi lemmas, same pos tag, highest frequency
                 else:
-                    return (the_lemma, "multi lemmas, same pos tag, other frequency")
+                    return (the_lemma, "MLSTOF") #multi lemmas, same pos tag, other frequency
         # If we end up here, there is no postag match at all, return top-frequency one
-        return (sorted_lemmas[0], "multi lemmas, different pos tag, highest frequency")
+        return (sorted_lemmas[0], "MLDTHF") #multi lemmas, different pos tag, highest frequency
     print( "UNKNOWN WORD" )
-    return (None, "unknown")
+    return (None, "UNKNOWN")
 
 def extract_postag(tag, l):
     return tag[0:l]
@@ -241,53 +264,64 @@ if not filename:
     print( "NOTHING TO DO...", file=sys.stderr )
     sys.exit(0)
 
+outfile    = outprefix + "-stats.txt"
+outwltfile = outprefix + "-wlt.txt"
+
 # Process test file
 lcount = 0
 if filename:
     with open(filename, 'r') as f:
         with open(outfile, 'w') as of:
-            for l in f:
-                l = l.strip()
-                if not l:
-                    continue
-                bits = l.split()
-                if 0 < len(bits) < 3: #only text/words
-                    word   = bits[0]
-                    lemma  = ""
-                    tag    = ""
-                if len(bits) >= 3:
-                    word   = bits[0]
-                    lemma  = bits[1]
-                    tag    = bits[2]
-                print("")
-                lcount += 1
-                the_lemma, ltype = lemmatise( word, lemma, tag )
-                lemmatiser_stats[ltype] += 1
-                if the_lemma:
-                    print( "lemma =", the_lemma, ltype )
-                    of.write( word+"\t"+the_lemma.lemma+"\t"+repr(the_lemma)+"\t"+ltype+"\n" )
-                    if the_lemma.lemma == lemma:
-                        lemmatiser_stats[ltype+" -correct"] += 1
-                        lemmatiser_stats["lemmatised-correct"] += 1
-                        print( "correct" )
-                    else:
-                        print( "wrong" )
+            with open(outwltfile, 'w') as ofwlt:
+                for l in f:
+                    l = l.strip()
+                    if not l:
+                        continue
+                    bits = l.split()
+                    if 0 < len(bits) < 3: #only text/words
+                        word   = bits[0]
+                        lemma  = ""
+                        tag    = ""
+                    if len(bits) >= 3:
+                        word   = bits[0]
+                        lemma  = bits[1]
+                        tag    = bits[2]
+                    print("")
+                    lcount += 1
+                    the_lemma, ltype = lemmatise( word, lemma, tag )
+                    ltype = strategies[ltype]
+                    lemmatiser_stats[ltype] += 1
+                    if the_lemma:
+                        print( "lemma =", the_lemma, ltype )
+                        # Instead of repr(the_lemma) write number of lemmas, list lemma:freq.?
+                        of.write( word+"\t"+the_lemma.lemma+"\t"+repr(the_lemma)+"\t"+ltype+"\n" )
+                        #
+                        ofwlt.write(word+"\t"+the_lemma.lemma+"\t"+the_lemma.tag+"\n")
+                        if the_lemma.lemma == lemma:
+                            lemmatiser_stats[ltype+" -correct"] += 1
+                            lemmatiser_stats["lemmatised-correct"] += 1
+                            print( "correct" )
+                        else:
+                            print( "wrong" )
+                            lemmatiser_stats[ltype+" -wrong"] += 1
+                            lemmatiser_stats["lemmatised-wrong"] += 1
+                    else: #not the_lemma
+                        of.write( word+"\tUNKNOWN\tNONE\t"+ltype+"\n" )
+                        ofwlt.write( word+"\tNONE\tNONE\n" )
                         lemmatiser_stats[ltype+" -wrong"] += 1
-                        lemmatiser_stats["lemmatised-wrong"] += 1
-                else: #not the_lemma
-                    of.write( word+"\tUNKNOWN\tNONE\t"+ltype+"\n" )
-                    lemmatiser_stats[ltype+" -wrong"] += 1
             
-print( "\nOutput in", outfile )
-print( "\n---- STATS ----" )
+with open(outfile, 'a') as of:
+    lemmatised_count = lemmatiser_stats["lemmatised-wrong"]+lemmatiser_stats["lemmatised-correct"]
+    correct_count    = lemmatiser_stats["lemmatised-correct"]
+    print( "#\n# line count", lcount, "lemmatised_count", lemmatised_count, file=of ) #diff is unknowns
 
-lemmatised_count = lemmatiser_stats["lemmatised-wrong"]+lemmatiser_stats["lemmatised-correct"]
-correct_count    = lemmatiser_stats["lemmatised-correct"]
-print( "line count", lcount, "lemmatised_count", lemmatised_count ) #diff is unknowns
+    for stat, count in sorted(lemmatiser_stats.items()):
+    #for stat, count in lemmatiser_stats.most_common():
+        print( "# {0:<60} {1:5n}".format(stat, count), file=of )
 
-for stat, count in sorted(lemmatiser_stats.items()):
-#for stat, count in lemmatiser_stats.most_common():
-    print( "{0:<60} {1:5n}".format(stat, count) )
-    
-print( "Correct (lemmatised only, no unknowns)", round(correct_count*100.0 / lemmatised_count, 2) )
-print( "Correct (lcount)", round(correct_count*100.0 / lcount, 2) )
+    print( "# Correct (lemmatised only, no unknowns)", round(correct_count*100.0 / lemmatised_count, 2), file=of )
+    print( "# Correct (lcount)", round(correct_count*100.0 / lcount, 2), file=of )
+
+print( "\nOutput in" )
+print( " ", outfile )
+print( " ", outwltfile )

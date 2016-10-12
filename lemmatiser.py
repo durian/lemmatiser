@@ -11,21 +11,47 @@ Lemmatiser -- Work in Progress
 ------------------------------
 
 USAGE:
-  lemmatiser.py -f <TEST FILE>
-  - Loads lexicon file automatically; greek_Haudag.pcases.lemma.lex.
+  lemmatiser.py -f <TEST FILE> -o OUT
+  - Loads lexicon file automatically; proiel_v2_perseus_merged.txt.
   - Extra word-lemma-tags can be added to extra-wlp.txt (for example
     punctuation).
-  - Produces two output files:
-    out-stats.txt: word, lemma, full lemma, info
-                   followed by statistics
-    out-wlt.txt: word lemma tag
+  - Produces two output files (and lots of output to the screen):
+    OUT-stats.txt: word, lemma, full lemma, info
+                   followed by #statistics
+    OUT-wlt.txt: word lemma tag
+                 output from the lemmatiser
 
-greek_Haudag.pcases.lemma.lex (proiel):
+  lemmatiser.py -w τῶν
+  - Looks up word in lexicon, prints associated lemmas.
 
-ἀλλήλων ἀλλήλων Pc-p---mg--i    25
-ἀλλήλων ἀλλήλων Pc-p---ng--i    4
-ἀλληλέων        ἀλληλέων        Pc-p---fg--i    2
-ἀλληλέων        ἀλληλέων        Pc-p---mg--i    1
+  lemmatiser.py -l ὕπνος
+  - Looks up lemma in lexicon.
+
+
+SCREEN OUTPUT:
+  lemmatise( ταῦτα οὗτος P--p---nn- )                 :input from test file
+  WORD IS IN LEXICON ταῦτα, 2                         :it has 2 entries in lexicon
+  [/ταῦτα/οὗτος/Pd-p---na--i/682/proiel/, /ταῦτα/οὗτος/Pd-p---nn--i/136/proiel/]
+  LEMMA ταῦτα, οὗτος, Pd-p---na--i,   682             :first lexicon entry
+  LEMMA ταῦτα, οὗτος, Pd-p---nn--i,   136             :second lexicon entry
+  lemma = ταῦτα, οὗτος, Pd-p---na--i,   682           :chosen lemmitisation
+  multi lemmas, different pos tag, highest frequency  :lemmatiser justification
+  correct                                             :score using test file
+
+LEXICON FILE:
+  proiel_v2_perseus_merged.txt:
+  
+  ἠριστοποιοῦντο ἀριστοποιέω V-3piie---
+  ἀναπλέουσι ἀναπλέω V-3ppia---
+  κατεπάγων κατεπάγω V--sppamn-
+  σάπφειρος σάπφιρος Nb-s---fn-
+
+TEST FILE:
+  hdt_Books_forFrog.col
+  
+  Ἡροδότου	Ἡρόδοτος	N--s---mg-
+  Ἁλικαρνησσέος	Ἁλικαρνασσεύς	N--s---mg-
+
 '''
 
 debug = False
@@ -39,6 +65,8 @@ class Word:
         self.lemmas = {} #key is the tag?
     def __repr__(self):
         return "|"+self.word+"|"+str(len(self.lemmas))+"|"
+    def __str__(self):
+        return self.word+", "+str(len(self.lemmas))
         
 class Lemma:
     def __init__(self, w, l, t, f):
@@ -53,25 +81,31 @@ class Lemma:
             sys.exit(1)
     def __repr__(self):
         return "/"+self.word+"/"+self.lemma+"/"+self.tag+"/"+str(self.freq)+"/"+str(self.src)+"/"
+    def __str__(self):
+        return self.word+", "+self.lemma+", "+self.tag+", "+"{0:5n}".format(self.freq)
 
-greekHDfile = "greek_Haudag.pcases.lemma.lex"
+greekHDfile = "proiel_v2_perseus_merged.txt" #"greek_Haudag.pcases.lemma.lex"
 ghd_words = {}
 filename  = None # test file
 extrafile = "extra-wlt.txt"
 outprefix = "out"
+lookup_w = None
+lookup_l = None
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "f:l:o:", [])
+    opts, args = getopt.getopt(sys.argv[1:], "f:l:o:w:", [])
 except getopt.GetoptError as err:
     print(str(err))
     sys.exit(1)
 for o, a in opts:
     if o in ("-f"):
         filename = a
-    elif o in ("-l"): #specify other lexicon
-         greekHDfile = a
+    elif o in ("-l"): #lookup a lemma
+         lookup_l = a
     elif o in ("-o"):
         outprefix = a
+    elif o in ("-w"): #looup a word
+        lookup_w = a
     else:
         assert False, "unhandled option"
 
@@ -79,10 +113,9 @@ line_count = 0
 print( "READING", greekHDfile, file=sys.stderr )
 with open(greekHDfile, 'r') as f:
     '''
-    WORD            LEMMA       TAG             COUNT
-    ἀλλήλοις       	ἀλλήλων	Pc-p---md--i   	5
-    ἀλλήλοις       	ἀλλήλων	Pc-p---nd--i   	2
-    ἀλλήλοισι      	ἀλλήλων	Pc-p---md--i   	9
+    WORD            LEMMA       TAG
+    διῆλθον          διέρχομαι    V-1saia---
+    διῆλθον          διέρχομαι    V-3paia---
     '''
     for l in f:
         l = l.strip()
@@ -90,16 +123,36 @@ with open(greekHDfile, 'r') as f:
             print( "SKIP", l, file=sys.stderr )
             continue
         bits = l.split()
-        if len(bits) != 4:
+        if len(bits) != 3:
             print( "SKIP", l, file=sys.stderr )
             continue
         line_count += 1
         word  = bits[0]
         lemma = bits[1]
         tag   = bits[2]
-        freq  = int(bits[3])
+        freq  = 1
         DBG(word, lemma, tag, freq)
         #DBG(ghd_words.keys())
+        # ---
+        if word in ghd_words.keys():
+            word_entry = ghd_words[word]
+            if tag in word_entry.lemmas: #indexed by tag
+                word_entry.lemmas[tag].freq += 1
+                DBG("PLUS ONE", lemma, tag)
+            else:
+                new_lemma = Lemma(word, lemma, tag, 1)
+                new_lemma.src = "merge"
+                word_entry.lemmas[tag] = new_lemma
+                DBG("append entry", word)
+        else:
+            word_entry = Word(word)
+            new_lemma = Lemma(word, lemma, tag, freq)
+            new_lemma.src = "merge"
+            word_entry.lemmas[tag] = new_lemma
+            ghd_words[word] = word_entry
+            DBG("new entry", word)
+        # ---
+        '''
         if word in ghd_words.keys():
             word_entry = ghd_words[word]
             new_lemma = Lemma(word, lemma, tag, freq)
@@ -116,13 +169,14 @@ with open(greekHDfile, 'r') as f:
             # en deze zijn te herkennen aan hun frequentie van 0 !
             ghd_words[word] = word_entry
             DBG("new entry", word)
+        '''
 DBG(len(ghd_words), line_count)
 
 # At the moment we have punctuation here.
 # format is word-lemma-tag
 #
 if extrafile:
-    print( "READING", extrafile, file=sys.stderr )
+    print( "\nREADING", extrafile, file=sys.stderr )
     with open(extrafile, 'r') as f:
         for l in f:
             l = l.strip()
@@ -156,7 +210,31 @@ if extrafile:
                 ghd_words[word] = word_entry
                 DBG("new entry", word)
 
-# Print top-3 most lemmas
+# Look up a single word from the lexicon
+if lookup_w:
+    print( "\nLOOKUP WORD", lookup_w )
+    if lookup_w in ghd_words:
+        print( "  ", ghd_words[lookup_w] )
+        for l in sorted(ghd_words[lookup_w].lemmas.values(), key=attrgetter('freq'), reverse=True):
+            print( "    ", l )
+
+# Look up a single lemma in all words
+if lookup_l:
+    print( "\nLOOKUP LEMMA", lookup_l )
+    for x in ghd_words:
+        output = []
+        for l in sorted(ghd_words[x].lemmas.values(), key=attrgetter('freq'), reverse=True):
+            if l.lemma == lookup_l:
+                output.append(l);
+        if output:
+            print( x )
+            for o in output:
+                print( "  ", o )
+
+if lookup_l or lookup_w:
+    sys.exit(1)
+
+# Print top-3 most lemmas, with top-3 lemma
 sorted_words = sorted(ghd_words, key=lambda k: len(ghd_words[k].lemmas), reverse=True)
 for x in sorted_words[0:3]:
     print( ghd_words[x], file=sys.stderr )
@@ -292,7 +370,8 @@ if filename:
                     ltype = strategies[ltype]
                     lemmatiser_stats[ltype] += 1
                     if the_lemma:
-                        print( "lemma =", the_lemma, ltype )
+                        print( "lemma =", the_lemma )
+                        print( ltype )
                         # Instead of repr(the_lemma) write number of lemmas, list lemma:freq.?
                         of.write( word+"\t"+the_lemma.lemma+"\t"+repr(the_lemma)+"\t"+ltype+"\n" )
                         #

@@ -35,7 +35,7 @@ SCREEN OUTPUT (when using "-v"):
   [/ταῦτα/οὗτος/Pd-p---na--i/682/proiel/, /ταῦτα/οὗτος/Pd-p---nn--i/136/proiel/]
   LEMMA ταῦτα, οὗτος, Pd-p---na--i,   682             :first lexicon entry
   LEMMA ταῦτα, οὗτος, Pd-p---nn--i,   136             :second lexicon entry
-  lemma = ταῦτα, οὗτος, Pd-p---na--i,   682           :chosen lemmitisation
+  lemma = ταῦτα, οὗτος, Pd-p---na--i,   682           :chosen lemmatisation
   multi lemmas, different pos tag, highest frequency  :lemmatiser justification
   correct                                             :score using test file
 

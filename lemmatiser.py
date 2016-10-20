@@ -157,42 +157,6 @@ with open(greekHDfile, 'r') as f:
             # en deze zijn te herkennen aan hun frequentie van 0 !
             ghd_words[word] = word_entry
             DBG("new entry", word)
-'''
-with open(greekHDfile, 'r') as f:
-    for l in f:
-        l = l.strip()
-        if len(l) > 0 and l[0] == "#":
-            print( "SKIP", l, file=sys.stderr )
-            continue
-        bits = l.split()
-        if len(bits) != 3:
-            print( "SKIP", l, file=sys.stderr )
-            continue
-        line_count += 1
-        word  = bits[0]
-        lemma = bits[1]
-        tag   = bits[2]
-        freq  = 1 #used to be bits[3] but not present now
-        DBG("file", line_count, word, lemma, tag, freq)
-        #DBG(ghd_words.keys())
-        if word in ghd_words.keys():
-            word_entry = ghd_words[word]
-            if tag in word_entry.lemmas: #indexed by tag
-                word_entry.lemmas[tag].freq += 1
-                DBG("updated entry", word_entry.lemmas[tag])
-            else:
-                new_lemma = Lemma(word, lemma, tag, 1)
-                new_lemma.src = "merge"
-                word_entry.lemmas[tag] = new_lemma
-                DBG("appended entry", word_entry.lemmas[tag])
-        else:
-            word_entry = Word(word)
-            new_lemma = Lemma(word, lemma, tag, freq)
-            new_lemma.src = "merge"
-            word_entry.lemmas[tag] = new_lemma
-            ghd_words[word] = word_entry
-            DBG("new entry", word, lemma, tag)
-'''
 DBG(len(ghd_words), line_count)
 
 # At the moment we have punctuation here.

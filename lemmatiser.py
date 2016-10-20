@@ -84,7 +84,7 @@ class Lemma:
     def __str__(self):
         return self.word+", "+self.lemma+", "+self.tag+", "+"{0:5n}".format(self.freq)
 
-greekHDfile = "proiel_v2_perseus_merged.txt" #"greek_Haudag.pcases.lemma.lex"
+greekHDfile = "greek_Haudag.pcases.lemma.lex" #"proiel_v2_perseus_merged.txt"
 ghd_words = {}
 filename  = None # test file
 extrafile = "extra-wlt.txt"
@@ -93,7 +93,7 @@ lookup_w = None
 lookup_l = None
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "f:l:o:w:", [])
+    opts, args = getopt.getopt(sys.argv[1:], "f:l:o:w:D", [])
 except getopt.GetoptError as err:
     print(str(err))
     sys.exit(1)
@@ -104,18 +104,22 @@ for o, a in opts:
          lookup_l = a
     elif o in ("-o"):
         outprefix = a
-    elif o in ("-w"): #looup a word
+    elif o in ("-w"): #lookup a word
         lookup_w = a
+    elif o in ("-D"):
+        debug = True
     else:
         assert False, "unhandled option"
 
 line_count = 0
 print( "READING", greekHDfile, file=sys.stderr )
+
 with open(greekHDfile, 'r') as f:
     '''
-    WORD            LEMMA       TAG
-    διῆλθον          διέρχομαι    V-1saia---
-    διῆλθον          διέρχομαι    V-3paia---
+    WORD            LEMMA       TAG             COUNT
+    ἀλλήλοις            ἀλλήλων Pc-p---md--i    5
+    ἀλλήλοις            ἀλλήλων Pc-p---nd--i    2
+    ἀλλήλοισι           ἀλλήλων Pc-p---md--i    9
     '''
     for l in f:
         l = l.strip()
@@ -123,36 +127,20 @@ with open(greekHDfile, 'r') as f:
             print( "SKIP", l, file=sys.stderr )
             continue
         bits = l.split()
-        if len(bits) != 3:
+        if len(bits) != 4:
             print( "SKIP", l, file=sys.stderr )
             continue
         line_count += 1
         word  = bits[0]
         lemma = bits[1]
         tag   = bits[2]
-        freq  = 1
+        try:
+            freq  = int(bits[3])
+        except ValueError:
+            print( "SKIP", l, file=sys.stderr )
+            continue
         DBG(word, lemma, tag, freq)
         #DBG(ghd_words.keys())
-        # ---
-        if word in ghd_words.keys():
-            word_entry = ghd_words[word]
-            if tag in word_entry.lemmas: #indexed by tag
-                word_entry.lemmas[tag].freq += 1
-                DBG("PLUS ONE", lemma, tag)
-            else:
-                new_lemma = Lemma(word, lemma, tag, 1)
-                new_lemma.src = "merge"
-                word_entry.lemmas[tag] = new_lemma
-                DBG("append entry", word)
-        else:
-            word_entry = Word(word)
-            new_lemma = Lemma(word, lemma, tag, freq)
-            new_lemma.src = "merge"
-            word_entry.lemmas[tag] = new_lemma
-            ghd_words[word] = word_entry
-            DBG("new entry", word)
-        # ---
-        '''
         if word in ghd_words.keys():
             word_entry = ghd_words[word]
             new_lemma = Lemma(word, lemma, tag, freq)
@@ -169,7 +157,42 @@ with open(greekHDfile, 'r') as f:
             # en deze zijn te herkennen aan hun frequentie van 0 !
             ghd_words[word] = word_entry
             DBG("new entry", word)
-        '''
+'''
+with open(greekHDfile, 'r') as f:
+    for l in f:
+        l = l.strip()
+        if len(l) > 0 and l[0] == "#":
+            print( "SKIP", l, file=sys.stderr )
+            continue
+        bits = l.split()
+        if len(bits) != 3:
+            print( "SKIP", l, file=sys.stderr )
+            continue
+        line_count += 1
+        word  = bits[0]
+        lemma = bits[1]
+        tag   = bits[2]
+        freq  = 1 #used to be bits[3] but not present now
+        DBG("file", line_count, word, lemma, tag, freq)
+        #DBG(ghd_words.keys())
+        if word in ghd_words.keys():
+            word_entry = ghd_words[word]
+            if tag in word_entry.lemmas: #indexed by tag
+                word_entry.lemmas[tag].freq += 1
+                DBG("updated entry", word_entry.lemmas[tag])
+            else:
+                new_lemma = Lemma(word, lemma, tag, 1)
+                new_lemma.src = "merge"
+                word_entry.lemmas[tag] = new_lemma
+                DBG("appended entry", word_entry.lemmas[tag])
+        else:
+            word_entry = Word(word)
+            new_lemma = Lemma(word, lemma, tag, freq)
+            new_lemma.src = "merge"
+            word_entry.lemmas[tag] = new_lemma
+            ghd_words[word] = word_entry
+            DBG("new entry", word, lemma, tag)
+'''
 DBG(len(ghd_words), line_count)
 
 # At the moment we have punctuation here.
@@ -377,6 +400,7 @@ if filename:
                         #
                         ofwlt.write(word+"\t"+the_lemma.lemma+"\t"+the_lemma.tag+"\n")
                         if the_lemma.lemma == lemma:
+                            print( the_lemma.lemma, lemma )
                             lemmatiser_stats[ltype+" -correct"] += 1
                             lemmatiser_stats["lemmatised-correct"] += 1
                             print( "correct" )

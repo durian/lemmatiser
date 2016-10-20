@@ -12,7 +12,7 @@ Lemmatiser -- Work in Progress
 
 USAGE:
   lemmatiser.py -f <TEST FILE> -o OUT
-  - Loads lexicon file automatically; proiel_v2_perseus_merged.txt.
+  - Loads lexicon file automatically; greek_Haudag.pcases.lemma.lex.
   - Extra word-lemma-tags can be added to extra-wlp.txt (for example
     punctuation).
   - Produces two output files (and lots of output to the screen):
@@ -20,6 +20,7 @@ USAGE:
                    followed by #statistics
     OUT-wlt.txt: word lemma tag
                  output from the lemmatiser
+  -Removes "#..." from lemmas in the test data.
 
   lemmatiser.py -w τῶν
   - Looks up word in lexicon, prints associated lemmas.
@@ -28,7 +29,7 @@ USAGE:
   - Looks up lemma in lexicon.
 
 
-SCREEN OUTPUT:
+SCREEN OUTPUT (when using "-v"):
   lemmatise( ταῦτα οὗτος P--p---nn- )                 :input from test file
   WORD IS IN LEXICON ταῦτα, 2                         :it has 2 entries in lexicon
   [/ταῦτα/οὗτος/Pd-p---na--i/682/proiel/, /ταῦτα/οὗτος/Pd-p---nn--i/136/proiel/]

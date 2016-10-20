@@ -91,9 +91,10 @@ extrafile = "extra-wlt.txt"
 outprefix = "out"
 lookup_w = None
 lookup_l = None
+verbose  = False
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "f:l:o:w:D", [])
+    opts, args = getopt.getopt(sys.argv[1:], "f:l:o:vw:D", [])
 except getopt.GetoptError as err:
     print(str(err))
     sys.exit(1)
@@ -104,6 +105,8 @@ for o, a in opts:
          lookup_l = a
     elif o in ("-o"):
         outprefix = a
+    elif o in ("-v"):
+        verbose = True
     elif o in ("-w"): #lookup a word
         lookup_w = a
     elif o in ("-D"):
@@ -222,12 +225,13 @@ if lookup_l or lookup_w:
     sys.exit(1)
 
 # Print top-3 most lemmas, with top-3 lemma
-sorted_words = sorted(ghd_words, key=lambda k: len(ghd_words[k].lemmas), reverse=True)
-for x in sorted_words[0:3]:
-    print( ghd_words[x], file=sys.stderr )
-    # print top-3 frequent lemmas
-    for l in sorted(ghd_words[x].lemmas.values(), key=attrgetter('freq'), reverse=True)[0:3]:
-        print( " ", l, file=sys.stderr )
+if verbose:
+    sorted_words = sorted(ghd_words, key=lambda k: len(ghd_words[k].lemmas), reverse=True)
+    for x in sorted_words[0:3]:
+        print( ghd_words[x], file=sys.stderr )
+        # print top-3 frequent lemmas
+        for l in sorted(ghd_words[x].lemmas.values(), key=attrgetter('freq'), reverse=True)[0:3]:
+            print( " ", l, file=sys.stderr )
 
 # Count lemmatisation stats
 lemmatiser_stats = Counter()
@@ -271,22 +275,26 @@ If it is not:
   ("unknown")
 '''
 def lemmatise(word, tf_lemma, tag):
-    print( "lemmatise(", word, tf_lemma, tag, ")" )
+    if verbose:
+        print( "lemmatise(", word, tf_lemma, tag, ")" )
     #
     # Check if word in greek_HD
     #
     if word in ghd_words.keys():
         # The word is in our dictionary
         word_entry = ghd_words[word]
-        print( "WORD IS IN LEXICON", word_entry )
+        if verbose:
+            print( "WORD IS IN LEXICON", word_entry )
         # instead of if-then, always take max, but for statistics maybe seperate
         #
         # Check the number of lemmas for this word. If one, the first one is max. freq.
         sorted_lemmas = sorted(word_entry.lemmas.values(), key=attrgetter('freq'), reverse=True)
-        print( sorted_lemmas )
+        if verbose:
+            print( sorted_lemmas )
         # If only one entry, return it no matter the postag.
-        if len(sorted_lemmas) == 1: #UNIQUE 
-            print( "ONE LEMMA" )
+        if len(sorted_lemmas) == 1: #UNIQUE
+            if verbose:
+                print( "ONE LEMMA" )
             the_lemma = sorted_lemmas[0]
             if compare_postags(tag, the_lemma.tag):
                 return (sorted_lemmas[0], "OLST") # one lemma, same pos tag
@@ -297,10 +305,12 @@ def lemmatise(word, tf_lemma, tag):
         #
         max_freq = sorted_lemmas[0].freq
         for the_lemma in sorted_lemmas:
-            print( "LEMMA", the_lemma )
+            if verbose:
+                print( "LEMMA", the_lemma )
             # First try to find the right postag
             if compare_postags(tag, the_lemma.tag):
-                print( "POSTAG MATCH", tag, the_lemma )
+                if verbose:
+                    print( "POSTAG MATCH", tag, the_lemma )
                 # was this a max_freq tag?
                 if the_lemma.freq == max_freq:
                     return (the_lemma, "MLSTHF") #multi lemmas, same pos tag, highest frequency
@@ -308,7 +318,8 @@ def lemmatise(word, tf_lemma, tag):
                     return (the_lemma, "MLSTOF") #multi lemmas, same pos tag, other frequency
         # If we end up here, there is no postag match at all, return top-frequency one
         return (sorted_lemmas[0], "MLDTHF") #multi lemmas, different pos tag, highest frequency
-    print( "UNKNOWN WORD" )
+    if verbose:
+        print( "UNKNOWN WORD" )
     return (None, "UNKNOWN")
 
 def extract_postag(tag, l):
@@ -326,14 +337,17 @@ def compare_postags(tf_tag, l_tag):
 # ἔργα    ἔργον   N--p---nn-
 #
 if not filename:
-    print( "NOTHING TO DO...", file=sys.stderr )
+    print( "\nNOTHING TO DO...", file=sys.stderr )
     sys.exit(0)
-
+else:
+    print( "\nLEMMATISING", filename, file=sys.stderr )
+    
 outfile    = outprefix + "-stats.txt"
 outwltfile = outprefix + "-wlt.txt"
 
 # Process test file
 lcount = 0
+hcount = 0 #count hash lemmas "foo#1"
 if filename:
     with open(filename, 'r') as f:
         with open(outfile, 'w') as of:
@@ -351,32 +365,42 @@ if filename:
                         word   = bits[0]
                         lemma  = bits[1]
                         tag    = bits[2]
-                    print("")
+                    if '#' in lemma:
+                        idx = lemma.find('#')
+                        lemma = lemma[0:idx]
+                        hcount += 1
+                    if verbose:
+                        print("")
                     lcount += 1
                     the_lemma, ltype = lemmatise( word, lemma, tag )
                     ltype = strategies[ltype]
                     lemmatiser_stats[ltype] += 1
                     if the_lemma:
-                        print( "lemma =", the_lemma )
-                        print( ltype )
+                        if verbose:
+                            print( "lemma =", the_lemma )
+                            print( ltype )
                         # Instead of repr(the_lemma) write number of lemmas, list lemma:freq.?
                         of.write( word+"\t"+the_lemma.lemma+"\t"+repr(the_lemma)+"\t"+ltype+"\n" )
                         #
                         ofwlt.write(word+"\t"+the_lemma.lemma+"\t"+the_lemma.tag+"\n")
                         if the_lemma.lemma == lemma:
-                            print( the_lemma.lemma, lemma )
+                            if verbose:
+                                print( the_lemma.lemma, lemma )
                             lemmatiser_stats[ltype+" -correct"] += 1
                             lemmatiser_stats["lemmatised-correct"] += 1
-                            print( "correct" )
+                            if verbose:
+                                print( "correct" )
                         else:
-                            print( "wrong" )
+                            if verbose:
+                                print( "wrong" )
                             lemmatiser_stats[ltype+" -wrong"] += 1
                             lemmatiser_stats["lemmatised-wrong"] += 1
                     else: #not the_lemma
                         of.write( word+"\tUNKNOWN\tNONE\t"+ltype+"\n" )
                         ofwlt.write( word+"\tNONE\tNONE\n" )
                         lemmatiser_stats[ltype+" -wrong"] += 1
-            
+print( "hcount", hcount)
+
 with open(outfile, 'a') as of:
     lemmatised_count = lemmatiser_stats["lemmatised-wrong"]+lemmatiser_stats["lemmatised-correct"]
     correct_count    = lemmatiser_stats["lemmatised-correct"]
@@ -392,3 +416,4 @@ with open(outfile, 'a') as of:
 print( "\nOutput in" )
 print( " ", outfile )
 print( " ", outwltfile )
+

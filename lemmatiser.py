@@ -124,11 +124,11 @@ with open(greekHDfile, 'r') as f:
     for l in f:
         l = l.strip()
         if len(l) > 0 and l[0] == "#":
-            print( "SKIP", l, file=sys.stderr )
+            print( "SKIP COMMENT", l, file=sys.stderr )
             continue
         bits = l.split()
         if len(bits) != 4:
-            print( "SKIP", l, file=sys.stderr )
+            print( "SKIP NOT 4 FIELDS", l, file=sys.stderr )
             continue
         line_count += 1
         word  = bits[0]
@@ -137,7 +137,7 @@ with open(greekHDfile, 'r') as f:
         try:
             freq  = int(bits[3])
         except ValueError:
-            print( "SKIP", l, file=sys.stderr )
+            print( "SKIP FREQUENCY ERROR", l, file=sys.stderr )
             continue
         DBG(word, lemma, tag, freq)
         #DBG(ghd_words.keys())

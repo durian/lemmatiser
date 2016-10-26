@@ -120,6 +120,7 @@ for o, a in opts:
         assert False, "unhandled option"
 
 line_count = 0
+new_entries = 0
 print( "READING", greekHDfile, file=sys.stderr )
 
 with open(greekHDfile, 'r') as f:
@@ -164,7 +165,10 @@ with open(greekHDfile, 'r') as f:
             # die nog niet in de andere twee proiel gevallen stonden
             # en deze zijn te herkennen aan hun frequentie van 0 !
             ghd_words[word] = word_entry
+            new_entries += 1
             DBG("new entry", word)
+print( "Added", new_entries, "new entries." )
+new_entries = 0
 
 if nofreqfile:
     print( "\nREADING", nofreqfile, file=sys.stderr )
@@ -201,8 +205,11 @@ if nofreqfile:
                 new_lemma.src = "nofreq"
                 word_entry.lemmas[tag] = new_lemma
                 ghd_words[word] = word_entry
+                new_entries += 1
                 DBG("new entry", word)
-                
+print( "Added", new_entries, "new entries." )
+new_entries = 0
+
 # At the moment we have punctuation here.
 # format is word-lemma-tag
 #
@@ -239,7 +246,9 @@ if extrafile:
                 new_lemma.src = "extra"
                 word_entry.lemmas[tag] = new_lemma
                 ghd_words[word] = word_entry
+                new_entries += 1
                 DBG("new entry", word)
+print( "Added", new_entries, "new entries." )
 
 # Look up a single word from the lexicon
 if lookup_w:
@@ -451,8 +460,8 @@ with open(outfile, 'a') as of:
     #for stat, count in lemmatiser_stats.most_common():
         print( "# {0:<60} {1:5n}".format(stat, count), file=of )
 
-    print( "# Correct (lemmatised only, no unknowns)", round(correct_count*100.0 / lemmatised_count, 2), file=of )
     print( "# Correct (lcount)", round(correct_count*100.0 / lcount, 2), file=of )
+    print( "# Correct (lemmatised only, no unknowns)", round(correct_count*100.0 / lemmatised_count, 2), file=of )
 
 print( "\nOutput in" )
 print( " ", outfile )

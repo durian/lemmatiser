@@ -195,7 +195,7 @@ if nofreqfile:
                     DBG("TAG ALREADY PRESENT", word, lemma, tag)
                 else:
                     new_lemma = Lemma(word, lemma, tag, freq)
-                    new_lemma.src = "extra"
+                    new_lemma.src = "nofreq"
                     word_entry.lemmas[tag] = new_lemma
                     DBG("append entry", word)
                 DBG("skip existing entry", word)

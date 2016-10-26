@@ -55,7 +55,11 @@ for n, f in enumerate(files):
     cmd = [ "python3", "lemmatiser.py", "-f", f, "-o", f ]
     print( "\n--------\n" )
     print( " ".join(cmd) )
-    subprocess.run( cmd )
+    x = subprocess.run( cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True )
+    out = x.stdout
+    for l in str(out).split('\n'):
+        if "SKIP" not in l:
+            print( l )
 
 print( "\n----------------\n" )
 

@@ -87,6 +87,8 @@ class Lemma:
 
 greekHDfile = "greek_Haudag.pcases.lemma.lex" #"proiel_v2_perseus_merged.txt"
 ghd_words = {}
+nofreqfile  = "proiel_v2_perseus_merged.txt"
+#nof_word = {} #lets keep these seperate ?
 filename  = None # test file
 extrafile = "extra-wlt.txt"
 outprefix = "out"
@@ -163,8 +165,44 @@ with open(greekHDfile, 'r') as f:
             # en deze zijn te herkennen aan hun frequentie van 0 !
             ghd_words[word] = word_entry
             DBG("new entry", word)
-DBG(len(ghd_words), line_count)
 
+if nofreqfile:
+    print( "\nREADING", nofreqfile, file=sys.stderr )
+    with open(nofreqfile, 'r') as f:
+        for l in f:
+            l = l.strip()
+            if len(l) > 0 and l[0] == "#":
+                print( "SKIP", l, file=sys.stderr )
+                continue
+            bits = l.split()
+            if len(bits) != 3:
+                print( "SKIP", l, file=sys.stderr )
+                continue
+            line_count += 1
+            word  = bits[0]
+            lemma = bits[1]
+            tag   = bits[2]
+            freq  = 0 #unknown
+            DBG(word, lemma, tag)
+            if word in ghd_words.keys():
+                word_entry = ghd_words[word]
+                if tag in word_entry.lemmas: # if already present, do nothing, because
+                    # we have it from first list
+                    DBG("TAG ALREADY PRESENT", word, lemma, tag)
+                else:
+                    new_lemma = Lemma(word, lemma, tag, freq)
+                    new_lemma.src = "extra"
+                    word_entry.lemmas[tag] = new_lemma
+                    DBG("append entry", word)
+                DBG("skip existing entry", word)
+            else:
+                word_entry = Word(word)
+                new_lemma = Lemma(word, lemma, tag, freq)
+                new_lemma.src = "nofreq"
+                word_entry.lemmas[tag] = new_lemma
+                ghd_words[word] = word_entry
+                DBG("new entry", word)
+                
 # At the moment we have punctuation here.
 # format is word-lemma-tag
 #
@@ -174,11 +212,11 @@ if extrafile:
         for l in f:
             l = l.strip()
             if len(l) > 0 and l[0] == "#":
-                print( "SKIP", l, file=sys.stderr )
+                print( "SKIP COMEMENT", l, file=sys.stderr )
                 continue
             bits = l.split()
             if len(bits) != 3:
-                print( "SKIP", l, file=sys.stderr )
+                print( "SKIP NOT 3 FIELDS", l, file=sys.stderr )
                 continue
             line_count += 1
             word  = bits[0]

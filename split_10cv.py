@@ -26,8 +26,8 @@ python3 split_10cv.py -f bar -p12
 1.00 2016-10-26
 """
 
-parts     = 10
-part      =  0
+parts     = 10 # number of splits
+part      =  0 # test file part
 afile     = None
 
 try:
@@ -72,10 +72,12 @@ print( fold_sizes )
 test_start = sum( fold_sizes[0:part] )
 test_end = test_start + fold_sizes[part]
 
-print( parts, part, test_start, test_end )
-
 file_out_train = afile+".cv"+'{0:02n}'.format(part)+".train"
 file_out_test  = afile+".cv"+'{0:02n}'.format(part)+".test"
+
+print( parts, part, test_start, test_end )
+print( file_out_train )
+print( file_out_test )
 
 lc = 0
 with open(afile) as fi:

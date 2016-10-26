@@ -95,7 +95,7 @@ lookup_l = None
 verbose  = False
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "f:l:o:vw:D", [])
+    opts, args = getopt.getopt(sys.argv[1:], "f:l:L:o:vw:D", [])
 except getopt.GetoptError as err:
     print(str(err))
     sys.exit(1)
@@ -104,6 +104,8 @@ for o, a in opts:
         filename = a
     elif o in ("-l"): #lookup a lemma
          lookup_l = a
+    elif o in ("-L"): #choose another lexicon file
+         greekHDfile = a
     elif o in ("-o"):
         outprefix = a
     elif o in ("-v"):
@@ -400,7 +402,7 @@ if filename:
                         of.write( word+"\tUNKNOWN\tNONE\t"+ltype+"\n" )
                         ofwlt.write( word+"\tNONE\tNONE\n" )
                         lemmatiser_stats[ltype+" -wrong"] += 1
-print( "hcount", hcount)
+#print( "hcount", hcount)
 
 with open(outfile, 'a') as of:
     lemmatised_count = lemmatiser_stats["lemmatised-wrong"]+lemmatiser_stats["lemmatised-correct"]

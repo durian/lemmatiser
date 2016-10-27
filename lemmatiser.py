@@ -5,6 +5,7 @@ import re
 import getopt, sys, os
 from collections import Counter
 from operator import attrgetter
+import random
 
 '''
 Lemmatiser -- Work in Progress
@@ -121,6 +122,7 @@ for o, a in opts:
 
 line_count = 0
 new_entries = 0
+zero_freq = 0
 print( "READING", greekHDfile, file=sys.stderr )
 
 with open(greekHDfile, 'r') as f:
@@ -149,8 +151,8 @@ with open(greekHDfile, 'r') as f:
             print( "SKIP FREQUENCY ERROR", l, file=sys.stderr )
             continue
         if freq == 0:
-            print( "SKIP 0 FREQUENCY", l, file=sys.stderr )
-            continue
+            print( "HAS 0 FREQUENCY", l, file=sys.stderr )
+            zero_freq += 1
         DBG(word, lemma, tag, freq)
         #DBG(ghd_words.keys())
         if word in ghd_words.keys():
@@ -171,6 +173,7 @@ with open(greekHDfile, 'r') as f:
             new_entries += 1
             DBG("new entry", word)
 print( "Added", new_entries, "new entries." )
+print( "Counted", zero_freq, "entries with frequency 0." )
 new_entries = 0
 
 if nofreqfile:
@@ -292,10 +295,14 @@ lemmatiser_stats = Counter()
 # Possible lemmatiser "strategies"
 strategies = {
     "MLDTHF" : "multi lemmas, different pos tag, highest frequency",
+    "MLNTHF" : "multi lemmas, no pos tag, highest frequency",
     "MLSTHF" : "multi lemmas, same pos tag, highest frequency",
+    "MLNTHF" : "multi lemmas, no pos tag, highest frequency",
     "MLSTOF" : "multi lemmas, same pos tag, other frequency",
+    "MLNTOF" : "multi lemmas, no pos tag, other frequency",
     "OLDT"   : "one lemma, different pos tag",
     "OLST"   : "one lemma, same pos tag",
+    "OLNT"   : "one lemma, no tag",
     "UNKNOWN": "unknown"
     }
 
@@ -349,6 +356,8 @@ def lemmatise(word, tf_lemma, tag):
             if verbose:
                 print( "ONE LEMMA" )
             the_lemma = sorted_lemmas[0]
+            if tag == "":
+                return (sorted_lemmas[0], "OLNT") # one lemma, no pos tag
             if compare_postags(tag, the_lemma.tag):
                 return (sorted_lemmas[0], "OLST") # one lemma, same pos tag
             else:
@@ -361,16 +370,26 @@ def lemmatise(word, tf_lemma, tag):
             if verbose:
                 print( "LEMMA", the_lemma )
             # First try to find the right postag
+            # check for tag == ""
             if compare_postags(tag, the_lemma.tag):
                 if verbose:
                     print( "POSTAG MATCH", tag, the_lemma )
                 # was this a max_freq tag?
                 if the_lemma.freq == max_freq:
-                    return (the_lemma, "MLSTHF") #multi lemmas, same pos tag, highest frequency
+                    if tag == "":
+                        return (the_lemma, "MLNTHF") #multi lemmas, no pos tag, highest frequency
+                    else:
+                        return (the_lemma, "MLSTHF") #multi lemmas, same pos tag, highest frequency
                 else:
-                    return (the_lemma, "MLSTOF") #multi lemmas, same pos tag, other frequency
+                    if tag == "":
+                        return (the_lemma, "MLNTOF") #multi lemmas, no pos tag, other frequency
+                    else:
+                        return (the_lemma, "MLSTOF") #multi lemmas, same pos tag, other frequency
         # If we end up here, there is no postag match at all, return top-frequency one
-        return (sorted_lemmas[0], "MLDTHF") #multi lemmas, different pos tag, highest frequency
+        if tag == "":
+            return (sorted_lemmas[0], "MLNTHF") #multi lemmas, no pos tag, highest frequency
+        else:
+            return (sorted_lemmas[0], "MLDTHF") #multi lemmas, different pos tag, highest frequency
     if verbose:
         print( "UNKNOWN WORD" )
     return (None, "UNKNOWN")
@@ -381,6 +400,8 @@ def extract_postag(tag, l):
 # Compare tag from test file to lemmatiser tag.
 def compare_postags(tf_tag, l_tag):
     l = min(len(tf_tag), len(l_tag))
+    if l == 0:
+        return False
     #print( l, tf_tag, tf_tag[0:l], l_tag, l_tag[0:l] )
     return extract_postag(tf_tag, l) == extract_postag(l_tag, l)
     

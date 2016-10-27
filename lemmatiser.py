@@ -463,11 +463,14 @@ with open(outfile, 'a') as of:
     #for stat, count in lemmatiser_stats.most_common():
         print( "# {0:<60} {1:5n}".format(stat, count), file=of )
 
-    print( "# Correct (lcount)", round(correct_count*100.0 / lcount, 2), file=of )
+    if lcount > 0:
+        print( "# Correct (lcount)", round(correct_count*100.0 / lcount, 2), file=of )
+    else:
+        print( "# Correct (lcount) 0", file=of )
     if lemmatised_count > 0:
         print( "# Correct (lemmatised only, no unknowns)", round(correct_count*100.0 / lemmatised_count, 2), file=of )
     else:
-        print( "# Correct (lemmatised only, no unknowns) 0.00", file=of )
+        print( "# Correct (lemmatised only, no unknowns) 0", file=of )
         
 
 print( "\nOutput in" )

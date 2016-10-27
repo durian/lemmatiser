@@ -148,6 +148,9 @@ with open(greekHDfile, 'r') as f:
         except ValueError:
             print( "SKIP FREQUENCY ERROR", l, file=sys.stderr )
             continue
+        if freq == 0:
+            print( "SKIP 0 FREQUENCY", l, file=sys.stderr )
+            continue
         DBG(word, lemma, tag, freq)
         #DBG(ghd_words.keys())
         if word in ghd_words.keys():
@@ -461,7 +464,11 @@ with open(outfile, 'a') as of:
         print( "# {0:<60} {1:5n}".format(stat, count), file=of )
 
     print( "# Correct (lcount)", round(correct_count*100.0 / lcount, 2), file=of )
-    print( "# Correct (lemmatised only, no unknowns)", round(correct_count*100.0 / lemmatised_count, 2), file=of )
+    if lemmatised_count > 0:
+        print( "# Correct (lemmatised only, no unknowns)", round(correct_count*100.0 / lemmatised_count, 2), file=of )
+    else:
+        print( "# Correct (lemmatised only, no unknowns) 0.00", file=of )
+        
 
 print( "\nOutput in" )
 print( " ", outfile )

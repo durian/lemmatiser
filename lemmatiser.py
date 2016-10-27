@@ -85,9 +85,9 @@ class Lemma:
     def __str__(self):
         return self.word+", "+self.lemma+", "+self.tag+", "+"{0:5n}".format(self.freq)
 
-greekHDfile = "greek_Haudag.pcases.lemma.lex" #"proiel_v2_perseus_merged.txt"
+greekHDfile = "greek_Haudag.pcases.lemma.lex"
 ghd_words = {}
-nofreqfile  = "proiel_v2_perseus_merged.txt"
+nofreqfile  = "proiel_v3_perseus_merged.txt"
 #nof_word = {} #lets keep these seperate ?
 filename  = None # test file
 extrafile = "extra-wlt.txt"

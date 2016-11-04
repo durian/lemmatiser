@@ -29,7 +29,6 @@ USAGE:
   lemmatiser.py -l ὕπνος
   - Looks up lemma in lexicon.
 
-
 SCREEN OUTPUT (when using "-v"):
   lemmatise( ταῦτα οὗτος P--p---nn- )                 :input from test file
   WORD IS IN LEXICON ταῦτα, 2                         :it has 2 entries in lexicon
@@ -54,6 +53,24 @@ TEST FILE:
   Ἡροδότου	Ἡρόδοτος	N--s---mg-
   Ἁλικαρνησσέος	Ἁλικαρνασσεύς	N--s---mg-
 
+DATA STRUCTURES:
+  Lexicon is contained in ghd_words[].
+
+  ghd_words["word"] contains a Word object.
+
+  Word object contains lemmas{}, indexed by POS-tag.
+
+  The lemmatiser looks up a word in the text in ghd_words, and tries 
+  to determine the correct lemma based on frequency info and/or POS-tag.
+
+ALGORITME:
+
+Zoek woord op in lexicon lijst
+als maar 1 lemma: neem dat als antwoord
+als meerdere lemmas:
+  zoek naar een lemma met dezelfde POS-tag als in de text
+  als gevonden: neem dat als antwoord
+  niet gevonden, neem het lemma met de hoogste count als antwoord
 '''
 
 debug = False
@@ -86,12 +103,14 @@ class Lemma:
     def __str__(self):
         return self.word+", "+self.lemma+", "+self.tag+", "+"{0:5n}".format(self.freq)
 
-greekHDfile = "greek_Haudag.pcases.lemma.lex"
+greekHDfile = "greek_Haudag.pcases.lemma.lex.rewrite"
 ghd_words = {}
 nofreqfile  = "proiel_v3_perseus_merged.txt"
 #nof_word = {} #lets keep these seperate ?
 filename  = None # test file
 extrafile = "extra-wlt.txt"
+frogfile = "testN.frog.out"
+frog_words = {}
 outprefix = "out"
 lookup_w = None
 lookup_l = None
@@ -255,6 +274,70 @@ if extrafile:
                 new_entries += 1
                 DBG("new entry", word)
 print( "Added", new_entries, "new entries." )
+new_entries = 0
+
+'''
+if frogfile:
+    print( "\nREADING", frogfile, file=sys.stderr )
+    with open(frogfile, 'r') as f:
+        # 1	Ἡροδότου	Ἡροδότου		V--sapmmg-	0.500688
+        # 2	Ἁλικαρνησσέος	Ἁλικαρνησσέος		V--sapmmn-	0.305347
+        for l in f:
+            l = l.strip()
+            bits = l.split()
+            if len(bits) != 5:
+                print( "SKIP NOT 5 FIELDS", l, file=sys.stderr )
+                continue
+            line_count += 1
+            word  = bits[1]
+            lemma = bits[2]
+            tag   = bits[3]
+            DBG(word, lemma, tag)
+            if word in frog_words.keys():
+                word_entry = frog_words[word]
+                if tag in word_entry.lemmas: #indexed by tag
+                    word_entry.lemmas[tag].freq += 1
+                    DBG("PLUS ONE", lemma, tag)
+                else:
+                    new_lemma = Lemma(word, lemma, tag, 1)
+                    new_lemma.src = "extra"
+                    word_entry.lemmas[tag] = new_lemma
+                    DBG("append entry", word)
+            else:
+                word_entry = Word(word)
+                new_lemma = Lemma(word, lemma, tag, freq)
+                new_lemma.src = "extra"
+                word_entry.lemmas[tag] = new_lemma
+                frog_words[word] = word_entry
+                new_entries += 1
+                DBG("new entry", word)
+print( "Added", new_entries, "new entries." )
+#print(repr(frog_words))
+'''
+
+# linear attampt
+frog_list = []
+idx = 0
+if frogfile:
+    print( "\nREADING", frogfile, file=sys.stderr )
+    with open(frogfile, 'r') as f:
+        # 1	Ἡροδότου	Ἡροδότου		V--sapmmg-	0.500688
+        # 2	Ἁλικαρνησσέος	Ἁλικαρνησσέος		V--sapmmn-	0.305347
+        for l in f:
+            if len(l) < 4:
+                continue
+            l = l.strip()
+            bits = l.split()
+            if len(bits) != 5:
+                print( "SKIP NOT 5 FIELDS", l, file=sys.stderr )
+                frog_list.append( [idx, "NONE", "NONE", "NONE"] )
+                idx += 1
+                continue
+            word  = bits[1]
+            lemma = bits[2]
+            tag   = bits[3]
+            frog_list.append( [idx, word, lemma, tag] )
+            idx += 1
 
 # Look up a single word from the lexicon
 if lookup_w:
@@ -303,6 +386,7 @@ strategies = {
     "OLDT"   : "one lemma, different pos tag",
     "OLST"   : "one lemma, same pos tag",
     "OLNT"   : "one lemma, no tag",
+    "FROG"   : "Frog",
     "UNKNOWN": "unknown"
     }
 
@@ -390,9 +474,28 @@ def lemmatise(word, tf_lemma, tag):
             return (sorted_lemmas[0], "MLNTHF") #multi lemmas, no pos tag, highest frequency
         else:
             return (sorted_lemmas[0], "MLDTHF") #multi lemmas, different pos tag, highest frequency
+    # frog test, this is the wrong way, because context etc.
+    '''
+    if word in frog_words:
+        print( "WORD IN FROG" )
+        word_entry = frog_words[word] 
+        sorted_lemmas = sorted(word_entry.lemmas.values(), key=attrgetter('freq'), reverse=True)
+        return( sorted_lemmas[0], "FROG" )
+    '''
+    #print( frog_list[lcount] ) #global lcount
     if verbose:
         print( "UNKNOWN WORD" )
     return (None, "UNKNOWN")
+
+def lemmatise_frog(word, lemma, tag, idx):
+    #print( idx, frog_list[idx] )
+    # [90158, 'ἐστὶ', 'εἰμί#1', 'V-3spia---']
+    try:
+        lemma = frog_list[idx][2]
+        new_lemma = Lemma(word, lemma, tag, 0)
+        return ( new_lemma, "FROG" )
+    except:
+        return (None, "UNKNOWN")
 
 def extract_postag(tag, l):
     return tag[0:l]
@@ -447,6 +550,10 @@ if filename:
                         print("")
                     lcount += 1
                     the_lemma, ltype = lemmatise( word, lemma, tag )
+                    # we possibly get (NONE, "UNKNOWN WORD")
+                    if not the_lemma:
+                        #Frog
+                        the_lemma, ltype = lemmatise_frog( word, lemma, tag, lcount-1 )
                     ltype = strategies[ltype]
                     lemmatiser_stats[ltype] += 1
                     if the_lemma:

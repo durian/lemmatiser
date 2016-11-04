@@ -17,7 +17,7 @@ USAGE:
   - Extra word-lemma-tags can be added to extra-wlp.txt (for example
     punctuation).
   - Produces two output files (and lots of output to the screen):
-    OUT-stats.txt: word, lemma, full lemma, info
+    OUT-stats.txt: word, lemma, tag, full lemma, info
                    followed by #statistics
     OUT-wlt.txt: word lemma tag
                  output from the lemmatiser
@@ -38,6 +38,10 @@ SCREEN OUTPUT (when using "-v"):
   lemma = ταῦτα, οὗτος, Pd-p---na--i,   682           :chosen lemmatisation
   multi lemmas, different pos tag, highest frequency  :lemmatiser justification
   correct                                             :score using test file
+
+FILE OUTPUT:
+  τὸν     ὁ       S--s---ma-      /τὸν/ὁ/S--s---ma-/2374/proiel/  CORRECT multi lemmas, same pos tag, highest frequency
+  χῶρον   χῶρος   N--s---ma-      /χῶρον/Χῶρος/N--s---ma-/0/nofreq/       WRONG   multi lemmas, same pos tag, other frequency
 
 LEXICON FILE:
   proiel_v2_perseus_merged.txt:
@@ -276,46 +280,7 @@ if extrafile:
 print( "Added", new_entries, "new entries." )
 new_entries = 0
 
-'''
-if frogfile:
-    print( "\nREADING", frogfile, file=sys.stderr )
-    with open(frogfile, 'r') as f:
-        # 1	Ἡροδότου	Ἡροδότου		V--sapmmg-	0.500688
-        # 2	Ἁλικαρνησσέος	Ἁλικαρνησσέος		V--sapmmn-	0.305347
-        for l in f:
-            l = l.strip()
-            bits = l.split()
-            if len(bits) != 5:
-                print( "SKIP NOT 5 FIELDS", l, file=sys.stderr )
-                continue
-            line_count += 1
-            word  = bits[1]
-            lemma = bits[2]
-            tag   = bits[3]
-            DBG(word, lemma, tag)
-            if word in frog_words.keys():
-                word_entry = frog_words[word]
-                if tag in word_entry.lemmas: #indexed by tag
-                    word_entry.lemmas[tag].freq += 1
-                    DBG("PLUS ONE", lemma, tag)
-                else:
-                    new_lemma = Lemma(word, lemma, tag, 1)
-                    new_lemma.src = "extra"
-                    word_entry.lemmas[tag] = new_lemma
-                    DBG("append entry", word)
-            else:
-                word_entry = Word(word)
-                new_lemma = Lemma(word, lemma, tag, freq)
-                new_lemma.src = "extra"
-                word_entry.lemmas[tag] = new_lemma
-                frog_words[word] = word_entry
-                new_entries += 1
-                DBG("new entry", word)
-print( "Added", new_entries, "new entries." )
-#print(repr(frog_words))
-'''
-
-# linear attampt
+# linear attempt at Frog file
 frog_list = []
 idx = 0
 if frogfile:
@@ -377,7 +342,7 @@ lemmatiser_stats = Counter()
 
 # Possible lemmatiser "strategies"
 strategies = {
-    "MLDTHF" : "multi lemmas, different pos tag, highest frequency",
+    "MLDTHF" : "multi lemmas, different pos tag, highest frequency", #no POS tag match
     "MLNTHF" : "multi lemmas, no pos tag, highest frequency",
     "MLSTHF" : "multi lemmas, same pos tag, highest frequency",
     "MLNTHF" : "multi lemmas, no pos tag, highest frequency",
@@ -474,15 +439,6 @@ def lemmatise(word, tf_lemma, tag):
             return (sorted_lemmas[0], "MLNTHF") #multi lemmas, no pos tag, highest frequency
         else:
             return (sorted_lemmas[0], "MLDTHF") #multi lemmas, different pos tag, highest frequency
-    # frog test, this is the wrong way, because context etc.
-    '''
-    if word in frog_words:
-        print( "WORD IN FROG" )
-        word_entry = frog_words[word] 
-        sorted_lemmas = sorted(word_entry.lemmas.values(), key=attrgetter('freq'), reverse=True)
-        return( sorted_lemmas[0], "FROG" )
-    '''
-    #print( frog_list[lcount] ) #global lcount
     if verbose:
         print( "UNKNOWN WORD" )
     return (None, "UNKNOWN")
@@ -492,6 +448,9 @@ def lemmatise_frog(word, lemma, tag, idx):
     # [90158, 'ἐστὶ', 'εἰμί#1', 'V-3spia---']
     try:
         lemma = frog_list[idx][2]
+        if '#' in lemma:
+            hidx = lemma.find('#')
+            lemma = lemma[0:hidx]
         new_lemma = Lemma(word, lemma, tag, 0)
         return ( new_lemma, "FROG" )
     except:
@@ -561,7 +520,8 @@ if filename:
                             print( "lemma =", the_lemma )
                             print( ltype )
                         # Instead of repr(the_lemma) write number of lemmas, list lemma:freq.?
-                        of.write( word+"\t"+the_lemma.lemma+"\t"+repr(the_lemma)+"\t"+ltype+"\n" )
+                        ##of.write( word+"\t"+the_lemma.lemma+"\t"+repr(the_lemma)+"\t"+ltype+"\n" )
+                        #of.write( word+"\t"+lemma+"\t"+tag+"\t"+repr(the_lemma)+"\t"+ltype+"\n" )
                         #
                         ofwlt.write(word+"\t"+the_lemma.lemma+"\t"+the_lemma.tag+"\n")
                         if the_lemma.lemma == lemma:
@@ -571,13 +531,15 @@ if filename:
                             lemmatiser_stats["lemmatised-correct"] += 1
                             if verbose:
                                 print( "correct" )
+                            of.write( word+"\t"+lemma+"\t"+tag+"\t"+repr(the_lemma)+"\t"+"CORRECT\t"+ltype+"\n" )
                         else:
                             if verbose:
                                 print( "wrong" )
                             lemmatiser_stats[ltype+" -wrong"] += 1
                             lemmatiser_stats["lemmatised-wrong"] += 1
+                            of.write( word+"\t"+lemma+"\t"+tag+"\t"+repr(the_lemma)+"\t"+"WRONG\t"+ltype+"\n" )
                     else: #not the_lemma
-                        of.write( word+"\tUNKNOWN\tNONE\t"+ltype+"\n" )
+                        of.write( word+"\tUNKNOWN\tUNKNOWN\tNONE\tWRONG\t"+ltype+"\n" )
                         ofwlt.write( word+"\tNONE\tNONE\n" )
                         lemmatiser_stats[ltype+" -wrong"] += 1
 #print( "hcount", hcount)
@@ -605,3 +567,6 @@ print( "\nOutput in" )
 print( " ", outfile )
 print( " ", outwltfile )
 
+'''
+χῶρον   χῶρος   N--s---ma-      /χῶρον/Χῶρος/N--s---ma-/0/nofreq/       WRONG   multi lemmas, same pos tag, other frequency
+'''

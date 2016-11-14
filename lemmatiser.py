@@ -155,7 +155,7 @@ if not files_found:
 
 if have_frog:
     print( "INIT FROG", file=sys.stderr )
-    frog = frog = frog.Frog(frog.FrogOptions(parser=False,tok=False,morph=False,mwu=False,chunking=False,ner=False), frog_cfg )
+    frog = frog.Frog(frog.FrogOptions(parser=False,tok=False,morph=False,mwu=False,chunking=False,ner=False), frog_cfg )
 
 line_count = 0
 new_entries = 0
@@ -188,7 +188,7 @@ with open(greekHDfile, 'r') as f:
             print( "SKIP FREQUENCY ERROR", l, file=sys.stderr )
             continue
         if freq == 0:
-            print( "HAS 0 FREQUENCY", l, file=sys.stderr )
+            #print( "HAS 0 FREQUENCY", l, file=sys.stderr )
             zero_freq += 1
         DBG(word, lemma, tag, freq)
         #DBG(ghd_words.keys())
@@ -457,7 +457,7 @@ def lemmatise(word, tf_lemma, tag):
         print( "UNKNOWN WORD" )
     return (None, "UNKNOWN")
 
-def lemmatise_frog(word, lemma, tag, idx):
+def lemmatise_frog_file(word, lemma, tag, idx):
     #print( idx, frog_list[idx] )
     # [90158, 'ἐστὶ', 'εἰμί#1', 'V-3spia---']
     try:
@@ -473,6 +473,19 @@ def lemmatise_frog(word, lemma, tag, idx):
         return ( new_lemma, "FROG" )
     except:
         return (None, "UNKNOWN")
+
+def lemmatise_frog(word, lemma, tag):
+    #[{'index': '1', 'lemma': 'κρατήρ', 'pos': 'N--s---ma-', 'eos': True, 'posprob': 1.0, 'text': 'κρητῆρα'}]
+    if have_frog:
+        try:
+            frog_out  = frog.process(word)
+            the_lemma = frog_out[0]["lemma"]
+            the_tag   = frog_out[0]["pos"]
+            new_lemma = Lemma(word, the_lemma, tag, 0)
+            return( new_lemma, "FROG" )
+        except:
+            pass
+    return (None, "UNKNOWN")
 
 def extract_postag(tag, l):
     return tag[0:l]
@@ -530,10 +543,18 @@ if filename:
                     the_lemma, ltype = lemmatise( word, lemma, tag )
                     # we possibly get (NONE, "UNKNOWN WORD")
                     if not the_lemma:
-                        #Call Frog
-                        the_lemma, ltype = lemmatise_frog( word, lemma, tag, lcount-1 )
-                    ltype = strategies[ltype]
-                    lemmatiser_stats[ltype] += 1
+                        #Call Frog 
+                        if have_frog:
+                            the_lemma, ltype = lemmatise_frog( word, lemma, tag )
+                            ltype = strategies[ltype]
+                            lemmatiser_stats[ltype] += 1
+                        elif frog_file:
+                            the_lemma, ltype = lemmatise_frog_file( word, lemma, tag, lcount-1 )
+                            ltype = strategies[ltype]
+                            lemmatiser_stats[ltype] += 1
+                        else:
+                            the_lemma = None
+                            ltype = "UNKNOWN"
                     if the_lemma:
                         if verbose:
                             print( "lemma =", the_lemma )

@@ -365,7 +365,8 @@ strategies = {
     "OLDT"   : "one lemma, but different pos tag",
     "OLST"   : "one lemma, same pos tag",
     "OLNT"   : "one lemma, no tag",
-    "FROG"   : "Frog file",
+    "FROG"   : "Frog",
+    "FROGF"  : "Frog file",
     "UNKNOWN": "unknown"
     }
 
@@ -470,7 +471,7 @@ def lemmatise_frog_file(word, lemma, tag, idx):
             print( "FROG OUT OF SYNC" )
             sys.exit(1)
         new_lemma = Lemma(word, lemma, tag, 0)
-        return ( new_lemma, "FROG" )
+        return ( new_lemma, "FROGF" )
     except:
         return (None, "UNKNOWN")
 
@@ -546,15 +547,13 @@ if filename:
                         #Call Frog 
                         if have_frog:
                             the_lemma, ltype = lemmatise_frog( word, lemma, tag )
-                            ltype = strategies[ltype]
-                            lemmatiser_stats[ltype] += 1
                         elif frog_file:
                             the_lemma, ltype = lemmatise_frog_file( word, lemma, tag, lcount-1 )
-                            ltype = strategies[ltype]
-                            lemmatiser_stats[ltype] += 1
                         else:
                             the_lemma = None
                             ltype = "UNKNOWN"
+                    ltype = strategies[ltype]
+                    lemmatiser_stats[ltype] += 1
                     if the_lemma:
                         if verbose:
                             print( "lemma =", the_lemma )

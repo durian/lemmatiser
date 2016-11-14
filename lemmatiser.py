@@ -7,6 +7,13 @@ from collections import Counter
 from operator import attrgetter
 import random
 
+have_frog = False
+try:
+    import frog
+    have_frog = True
+except:
+    print( "No Frog", file=sys.stderr )
+
 '''
 Lemmatiser -- Work in Progress
 ------------------------------
@@ -18,10 +25,10 @@ USAGE:
     punctuation).
   - Produces two output files (and lots of output to the screen):
     OUT-stats.txt: word, lemma, tag, full lemma, info
-                   followed by #statistics
+                   followed by statistics
     OUT-wlt.txt: word lemma tag
                  output from the lemmatiser
-  -Removes "#..." from lemmas in the test data.
+  -Removes "#." from lemmas in the test data.
 
   lemmatiser.py -w τῶν
   - Looks up word in lexicon, prints associated lemmas.
@@ -42,14 +49,6 @@ SCREEN OUTPUT (when using "-v"):
 FILE OUTPUT:
   τὸν     ὁ       S--s---ma-      /τὸν/ὁ/S--s---ma-/2374/proiel/  CORRECT multi lemmas, same pos tag, highest frequency
   χῶρον   χῶρος   N--s---ma-      /χῶρον/Χῶρος/N--s---ma-/0/nofreq/       WRONG   multi lemmas, same pos tag, other frequency
-
-LEXICON FILE:
-  proiel_v2_perseus_merged.txt:
-  
-  ἠριστοποιοῦντο ἀριστοποιέω V-3piie---
-  ἀναπλέουσι ἀναπλέω V-3ppia---
-  κατεπάγων κατεπάγω V--sppamn-
-  σάπφειρος σάπφιρος Nb-s---fn-
 
 TEST FILE:
   hdt_Books_forFrog.col
@@ -107,7 +106,7 @@ class Lemma:
     def __str__(self):
         return self.word+", "+self.lemma+", "+self.tag+", "+"{0:5n}".format(self.freq)
 
-greekHDfile = "greek_Haudag.pcases.lemma.lex.rewrite"
+greekHDfile = "greek_Haudag.pcases.lemma.lex.rewrite_pluslater"
 ghd_words = {}
 nofreqfile  = "proiel_v3_perseus_merged.txt"
 #nof_word = {} #lets keep these seperate ?
@@ -119,6 +118,7 @@ outprefix = "out"
 lookup_w = None
 lookup_l = None
 verbose  = False
+frog_cfg = "frog.cfg.template"
 
 try:
     opts, args = getopt.getopt(sys.argv[1:], "f:l:L:o:vw:D", [])
@@ -142,6 +142,20 @@ for o, a in opts:
         debug = True
     else:
         assert False, "unhandled option"
+
+# Sanity checks
+
+files_found = True
+for f in [greekHDfile, filename, nofreqfile, extrafile, frogfile, frog_cfg]:
+    if f and not os.path.exists( f ):
+        print( "ERROR: FILE NOT FOUND:", f, file=sys.stderr )
+        files_found = False
+if not files_found:
+    sys.exit(1)
+
+if have_frog:
+    print( "INIT FROG", file=sys.stderr )
+    frog = frog = frog.Frog(frog.FrogOptions(parser=False,tok=False,morph=False,mwu=False,chunking=False,ner=False), frog_cfg )
 
 line_count = 0
 new_entries = 0
@@ -181,13 +195,13 @@ with open(greekHDfile, 'r') as f:
         if word in ghd_words.keys():
             word_entry = ghd_words[word]
             new_lemma = Lemma(word, lemma, tag, freq)
-            new_lemma.src = "proiel"
+            new_lemma.src = "greek_Haudag" #proiel
             word_entry.lemmas[tag] = new_lemma
             DBG("append entry", word)
         else:
             word_entry = Word(word)
             new_lemma = Lemma(word, lemma, tag, freq)
-            new_lemma.src = "proiel"
+            new_lemma.src = "greek_Haudag" #"proiel"
             word_entry.lemmas[tag] = new_lemma
             # Deze p-gevallen lijst bevat woordvorm-pos combinaties
             # die nog niet in de andere twee proiel gevallen stonden
@@ -224,14 +238,14 @@ if nofreqfile:
                     DBG("TAG ALREADY PRESENT", word, lemma, tag)
                 else:
                     new_lemma = Lemma(word, lemma, tag, freq)
-                    new_lemma.src = "nofreq"
+                    new_lemma.src = "merged" #"nofreq"
                     word_entry.lemmas[tag] = new_lemma
                     DBG("append entry", word)
                 DBG("skip existing entry", word)
             else:
                 word_entry = Word(word)
                 new_lemma = Lemma(word, lemma, tag, freq)
-                new_lemma.src = "nofreq"
+                new_lemma.src = "merged" #"nofreq"
                 word_entry.lemmas[tag] = new_lemma
                 ghd_words[word] = word_entry
                 new_entries += 1
@@ -342,16 +356,16 @@ lemmatiser_stats = Counter()
 
 # Possible lemmatiser "strategies"
 strategies = {
-    "MLDTHF" : "multi lemmas, different pos tag, highest frequency", #no POS tag match
-    "MLNTHF" : "multi lemmas, no pos tag, highest frequency",
-    "MLSTHF" : "multi lemmas, same pos tag, highest frequency",
-    "MLNTHF" : "multi lemmas, no pos tag, highest frequency",
-    "MLSTOF" : "multi lemmas, same pos tag, other frequency",
-    "MLNTOF" : "multi lemmas, no pos tag, other frequency",
-    "OLDT"   : "one lemma, different pos tag",
+    "MLDTHF" : "multi lemmas, no pos tag match, highest frequency", #DT=different tag
+    "MLNTHF" : "multi lemmas, no tag, highest frequency",
+    "MLSTHF" : "multi lemmas, pos tag match, and highest frequency",
+    "MLNTHF" : "multi lemmas, no tag, highest frequency",
+    "MLSTOF" : "multi lemmas, pos tag match, but other frequency",
+    "MLNTOF" : "multi lemmas, no tag, other frequency",
+    "OLDT"   : "one lemma, but different pos tag",
     "OLST"   : "one lemma, same pos tag",
     "OLNT"   : "one lemma, no tag",
-    "FROG"   : "Frog",
+    "FROG"   : "Frog file",
     "UNKNOWN": "unknown"
     }
 
@@ -405,7 +419,7 @@ def lemmatise(word, tf_lemma, tag):
             if verbose:
                 print( "ONE LEMMA" )
             the_lemma = sorted_lemmas[0]
-            if tag == "":
+            if tag == "": #data without tags to compare
                 return (sorted_lemmas[0], "OLNT") # one lemma, no pos tag
             if compare_postags(tag, the_lemma.tag):
                 return (sorted_lemmas[0], "OLST") # one lemma, same pos tag
@@ -425,17 +439,17 @@ def lemmatise(word, tf_lemma, tag):
                     print( "POSTAG MATCH", tag, the_lemma )
                 # was this a max_freq tag?
                 if the_lemma.freq == max_freq:
-                    if tag == "":
+                    if tag == "": #data without tags to compare
                         return (the_lemma, "MLNTHF") #multi lemmas, no pos tag, highest frequency
                     else:
                         return (the_lemma, "MLSTHF") #multi lemmas, same pos tag, highest frequency
                 else:
-                    if tag == "":
+                    if tag == "": #data without tags to compare
                         return (the_lemma, "MLNTOF") #multi lemmas, no pos tag, other frequency
                     else:
                         return (the_lemma, "MLSTOF") #multi lemmas, same pos tag, other frequency
         # If we end up here, there is no postag match at all, return top-frequency one
-        if tag == "":
+        if tag == "": #data without tags to compare
             return (sorted_lemmas[0], "MLNTHF") #multi lemmas, no pos tag, highest frequency
         else:
             return (sorted_lemmas[0], "MLDTHF") #multi lemmas, different pos tag, highest frequency
@@ -451,6 +465,10 @@ def lemmatise_frog(word, lemma, tag, idx):
         if '#' in lemma:
             hidx = lemma.find('#')
             lemma = lemma[0:hidx]
+        frog_word = frog_list[idx][1]
+        if frog_word != word:
+            print( "FROG OUT OF SYNC" )
+            sys.exit(1)
         new_lemma = Lemma(word, lemma, tag, 0)
         return ( new_lemma, "FROG" )
     except:
@@ -508,10 +526,11 @@ if filename:
                     if verbose:
                         print("")
                     lcount += 1
+                    #tag = "" # to test w/o the pos tag info
                     the_lemma, ltype = lemmatise( word, lemma, tag )
                     # we possibly get (NONE, "UNKNOWN WORD")
                     if not the_lemma:
-                        #Frog
+                        #Call Frog
                         the_lemma, ltype = lemmatise_frog( word, lemma, tag, lcount-1 )
                     ltype = strategies[ltype]
                     lemmatiser_stats[ltype] += 1

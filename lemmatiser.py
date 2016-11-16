@@ -123,7 +123,7 @@ verbose  = False
 frog_cfg = "frog.cfg.template"
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "f:l:L:o:vw:D", [])
+    opts, args = getopt.getopt(sys.argv[1:], "f:l:L:o:vw:DF", [])
 except getopt.GetoptError as err:
     print(str(err))
     sys.exit(1)
@@ -142,6 +142,8 @@ for o, a in opts:
         lookup_w = a
     elif o in ("-D"):
         debug = True
+    elif o in ("-F"):
+        have_frog = False #force ignore frog
     else:
         assert False, "unhandled option"
 
@@ -552,7 +554,7 @@ if filename:
                         #Call Frog 
                         if have_frog:
                             the_lemma, ltype = lemmatise_frog( word, lemma, tag )
-                        elif frog_file:
+                        elif frogfile:
                             the_lemma, ltype = lemmatise_frog_file( word, lemma, tag, lcount-1 )
                         else:
                             the_lemma = None

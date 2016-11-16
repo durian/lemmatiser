@@ -397,6 +397,9 @@ If it is:
         ("multi lemmas, different pos tag, highest frequency")
 
 If it is not:
+  1) Call Frog (or lookup in Frog list), return it.
+     ("Frog" / "Frog list")
+  2) If this fails:
   return None.
   ("unknown")
 '''

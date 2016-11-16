@@ -16,7 +16,8 @@ except:
 
 '''
 Lemmatiser -- Work in Progress
-------------------------------
+Version with Frog/Python interface
+----------------------------------
 
 USAGE:
   lemmatiser.py -f <TEST FILE> -o OUT
@@ -74,6 +75,7 @@ als meerdere lemmas:
   zoek naar een lemma met dezelfde POS-tag als in de text
   als gevonden: neem dat als antwoord
   niet gevonden, neem het lemma met de hoogste count als antwoord
+als niet in lees: roep Frog aan
 '''
 
 debug = False
@@ -112,7 +114,7 @@ nofreqfile  = "proiel_v3_perseus_merged.txt"
 #nof_word = {} #lets keep these seperate ?
 filename  = None # test file
 extrafile = "extra-wlt.txt"
-frogfile = "testN.frog.out"
+frogfile = None #"testN.frog.out"
 frog_words = {}
 outprefix = "out"
 lookup_w = None

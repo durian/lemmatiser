@@ -75,7 +75,7 @@ als meerdere lemmas:
   zoek naar een lemma met dezelfde POS-tag als in de text
   als gevonden: neem dat als antwoord
   niet gevonden, neem het lemma met de hoogste count als antwoord
-als niet in lees: roep Frog aan
+als niet in lijst: roep Frog aan
 '''
 
 debug = False

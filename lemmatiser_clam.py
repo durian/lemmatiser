@@ -528,25 +528,13 @@ if filename:
                             #of.write( word+"\t"+lemma+"\t"+tag+"\t"+repr(the_lemma)+"\t"+ltype+"\n" )
                             #
                             ofwlt.write(word+"\t"+the_lemma.lemma+"\t"+the_lemma.tag+"\n")
-                            if the_lemma.lemma == lemma:
-                                if verbose:
-                                    print( the_lemma.lemma, lemma )
-                                lemmatiser_stats[ltype+" -correct"] += 1
-                                lemmatiser_stats["lemmatised-correct"] += 1
-                                if verbose:
-                                    print( "correct" )
-                                of.write( word+"\t"+lemma+"\t"+tag+"\t"+repr(the_lemma)+"\t"+"CORRECT\t"+ltype+"\n" )
-                            else:
-                                if verbose:
-                                    print( "wrong" )
-                                lemmatiser_stats[ltype+" -wrong"] += 1
-                                lemmatiser_stats["lemmatised-wrong"] += 1
-                                of.write( word+"\t"+lemma+"\t"+tag+"\t"+repr(the_lemma)+"\t"+"WRONG\t"+ltype+"\n" )
+                            # These statistics can only be calculated with a test file containing
+                            # the correct answers...
+                            # New output w/o CORRECT/WRONG
+                            of.write( word+"\t"+lemma+"\t"+tag+"\t"+repr(the_lemma)+"\t"+ltype+"\n" )
                         else: #not the_lemma
-                            of.write( word+"\tUNKNOWN\tUNKNOWN\tNONE\tWRONG\t"+ltype+"\n" )
+                            of.write( word+"\tUNKNOWN\tUNKNOWN\tNONE\t"+ltype+"\n" )
                             ofwlt.write( word+"\tNONE\tNONE\n" )
-                            lemmatiser_stats[ltype+" -wrong"] += 1
-    #print( "hcount", hcount)
 
 with open(outfile, 'a') as of:
     lemmatised_count = lemmatiser_stats["lemmatised-wrong"]+lemmatiser_stats["lemmatised-correct"]

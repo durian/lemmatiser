@@ -447,11 +447,13 @@ def query_frog(word):
     if have_frog:
         try:
             frog_out  = frog.process(word)
-            the_lemma = frog_out[0]["lemma"]
-            the_tag   = frog_out[0]["pos"]
-            return (word, the_lemma, the_tag)
+            if frog_out:
+                the_lemma = frog_out[0]["lemma"]
+                the_tag   = frog_out[0]["pos"]
+                return (word, the_lemma, the_tag)
         except:
             print( "Unexpected error:", sys.exc_info()[0] )
+            print ( frog_out )
             pass
     return (None, None, None)
 
@@ -506,45 +508,45 @@ if filename:
                             #sys.exit(1)
                         # try our lemmatiser.
                         the_lemma, ltype = lemmatise( word, frog_t )
-                    # we possibly get (NONE, "UNKNOWN WORD")
-                    if not the_lemma:
-                        #Call Frog 
-                        if have_frog:
-                            the_lemma = frog_l
-                            ltype = "FROG"
-                        else:
-                            the_lemma = None
-                            ltype = "UNKNOWN"
-                    ltype = strategies[ltype]
-                    lemmatiser_stats[ltype] += 1
-                    if the_lemma:
-                        if verbose:
-                            print( "lemma =", the_lemma )
-                            print( ltype )
-                        # Instead of repr(the_lemma) write number of lemmas, list lemma:freq.?
-                        ##of.write( word+"\t"+the_lemma.lemma+"\t"+repr(the_lemma)+"\t"+ltype+"\n" )
-                        #of.write( word+"\t"+lemma+"\t"+tag+"\t"+repr(the_lemma)+"\t"+ltype+"\n" )
-                        #
-                        ofwlt.write(word+"\t"+the_lemma.lemma+"\t"+the_lemma.tag+"\n")
-                        if the_lemma.lemma == lemma:
+                        # we possibly get (NONE, "UNKNOWN WORD")
+                        if not the_lemma:
+                            #Call Frog 
+                            if have_frog and frog_w:
+                                the_lemma = Lemma(word, frog_l, frog_t, 0)
+                                ltype = "FROG"
+                            else:
+                                the_lemma = None
+                                ltype = "UNKNOWN"
+                        ltype = strategies[ltype]
+                        lemmatiser_stats[ltype] += 1
+                        if the_lemma:
                             if verbose:
-                                print( the_lemma.lemma, lemma )
-                            lemmatiser_stats[ltype+" -correct"] += 1
-                            lemmatiser_stats["lemmatised-correct"] += 1
-                            if verbose:
-                                print( "correct" )
-                            of.write( word+"\t"+lemma+"\t"+tag+"\t"+repr(the_lemma)+"\t"+"CORRECT\t"+ltype+"\n" )
-                        else:
-                            if verbose:
-                                print( "wrong" )
+                                print( "lemma =", the_lemma )
+                                print( ltype )
+                            # Instead of repr(the_lemma) write number of lemmas, list lemma:freq.?
+                            ##of.write( word+"\t"+the_lemma.lemma+"\t"+repr(the_lemma)+"\t"+ltype+"\n" )
+                            #of.write( word+"\t"+lemma+"\t"+tag+"\t"+repr(the_lemma)+"\t"+ltype+"\n" )
+                            #
+                            ofwlt.write(word+"\t"+the_lemma.lemma+"\t"+the_lemma.tag+"\n")
+                            if the_lemma.lemma == lemma:
+                                if verbose:
+                                    print( the_lemma.lemma, lemma )
+                                lemmatiser_stats[ltype+" -correct"] += 1
+                                lemmatiser_stats["lemmatised-correct"] += 1
+                                if verbose:
+                                    print( "correct" )
+                                of.write( word+"\t"+lemma+"\t"+tag+"\t"+repr(the_lemma)+"\t"+"CORRECT\t"+ltype+"\n" )
+                            else:
+                                if verbose:
+                                    print( "wrong" )
+                                lemmatiser_stats[ltype+" -wrong"] += 1
+                                lemmatiser_stats["lemmatised-wrong"] += 1
+                                of.write( word+"\t"+lemma+"\t"+tag+"\t"+repr(the_lemma)+"\t"+"WRONG\t"+ltype+"\n" )
+                        else: #not the_lemma
+                            of.write( word+"\tUNKNOWN\tUNKNOWN\tNONE\tWRONG\t"+ltype+"\n" )
+                            ofwlt.write( word+"\tNONE\tNONE\n" )
                             lemmatiser_stats[ltype+" -wrong"] += 1
-                            lemmatiser_stats["lemmatised-wrong"] += 1
-                            of.write( word+"\t"+lemma+"\t"+tag+"\t"+repr(the_lemma)+"\t"+"WRONG\t"+ltype+"\n" )
-                    else: #not the_lemma
-                        of.write( word+"\tUNKNOWN\tUNKNOWN\tNONE\tWRONG\t"+ltype+"\n" )
-                        ofwlt.write( word+"\tNONE\tNONE\n" )
-                        lemmatiser_stats[ltype+" -wrong"] += 1
-#print( "hcount", hcount)
+    #print( "hcount", hcount)
 
 with open(outfile, 'a') as of:
     lemmatised_count = lemmatiser_stats["lemmatised-wrong"]+lemmatiser_stats["lemmatised-correct"]

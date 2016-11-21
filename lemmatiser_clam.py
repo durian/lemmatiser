@@ -487,6 +487,11 @@ for filename in filenames:
     
     print( "\nLEMMATISING", filename, file=sys.stderr )
 
+    # Reset Counters
+    lemmatiser_stats["unknown"] = 0
+    for s in strategies:
+        lemmatiser_stats[strategies[s]] = 0
+
     # Output is put into these two files.
     outprefix  = filename
     outfile    = outprefix + ".L.stats.txt"

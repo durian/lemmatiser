@@ -350,10 +350,10 @@ strategies = {
     }
 
 # Prefill Counter
-lemmatiser_stats["lemmatised-correct"] = 0
-lemmatiser_stats["lemmatised-wrong"] = 0
+#lemmatiser_stats["lemmatised-correct"] = 0
+#lemmatiser_stats["lemmatised-wrong"] = 0
 lemmatiser_stats["unknown"] = 0
-lemmatiser_stats["unknown -wrong"] = 0
+#lemmatiser_stats["unknown -wrong"] = 0
 for s in strategies:
     lemmatiser_stats[strategies[s]] = 0
     #lemmatiser_stats[strategies[s]+" -correct"] = 0
@@ -502,15 +502,15 @@ if filename:
                         # first frog for POS, then lemmatiser
                         frog_w, frog_l, frog_t = query_frog(word)
                         if verbose:
-                            print( "frog:", word, frog_w, frog_l, frog_t )
+                            print( "frog(", word, "):", frog_w, frog_l, frog_t )
                         if not frog_l or not frog_t:
                             print( "NO FROG OUTPUT",  file=sys.stderr )
                             #sys.exit(1)
-                        # try our lemmatiser.
+                        # try our lemmatiser, with Frog pos tag
                         the_lemma, ltype = lemmatise( word, frog_t )
                         # we possibly get (NONE, "UNKNOWN WORD")
                         if not the_lemma:
-                            #Call Frog 
+                            #Use frog output for lemma as well
                             if have_frog and frog_w:
                                 the_lemma = Lemma(word, frog_l, frog_t, 0)
                                 ltype = "FROG"
@@ -531,15 +531,15 @@ if filename:
                             # These statistics can only be calculated with a test file containing
                             # the correct answers...
                             # New output w/o CORRECT/WRONG
-                            of.write( word+"\t"+lemma+"\t"+tag+"\t"+repr(the_lemma)+"\t"+ltype+"\n" )
+                            of.write( word+"\t"+the_lemma.lemma+"\t"+the_lemma.tag+"\t"+repr(the_lemma)+"\t"+ltype+"\n" )
                         else: #not the_lemma
                             of.write( word+"\tUNKNOWN\tUNKNOWN\tNONE\t"+ltype+"\n" )
                             ofwlt.write( word+"\tNONE\tNONE\n" )
 
 with open(outfile, 'a') as of:
-    lemmatised_count = lemmatiser_stats["lemmatised-wrong"]+lemmatiser_stats["lemmatised-correct"]
-    correct_count    = lemmatiser_stats["lemmatised-correct"]
-    print( "#\n# line count", lcount, "lemmatised_count", lemmatised_count, file=of ) #diff is unknowns
+    lemmatised_count = 0 #lemmatiser_stats["lemmatised-wrong"]+lemmatiser_stats["lemmatised-correct"]
+    correct_count    = 0 #lemmatiser_stats["lemmatised-correct"]
+    print( "#\n# line count", lcount, "lemmatised_count", lemmatised_count, file=of ) 
 
     for stat, count in sorted(lemmatiser_stats.items()):
     #for stat, count in lemmatiser_stats.most_common():

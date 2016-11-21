@@ -356,8 +356,8 @@ lemmatiser_stats["unknown"] = 0
 lemmatiser_stats["unknown -wrong"] = 0
 for s in strategies:
     lemmatiser_stats[strategies[s]] = 0
-    lemmatiser_stats[strategies[s]+" -correct"] = 0
-    lemmatiser_stats[strategies[s]+" -wrong"] = 0
+    #lemmatiser_stats[strategies[s]+" -correct"] = 0
+    #lemmatiser_stats[strategies[s]+" -wrong"] = 0
 
 '''
 Lemmatiser strategy:

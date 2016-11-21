@@ -6,6 +6,7 @@ import getopt, sys, os
 from collections import Counter
 from operator import attrgetter
 import random
+import glob
 
 have_frog = False
 try:
@@ -112,10 +113,10 @@ class Lemma:
 greekHDfile = "greek_Haudag.pcases.lemma.lex.rewrite_pluslater"
 ghd_words = {}
 nofreqfile  = "proiel_v3_perseus_merged.txt"
+filenames = []
 filename  = None # test file
 extrafile = "extra-wlt.txt"
 frog_words = {}
-outprefix = "out"
 lookup_w = None
 lookup_l = None
 verbose  = False
@@ -128,13 +129,12 @@ except getopt.GetoptError as err:
     sys.exit(1)
 for o, a in opts:
     if o in ("-f"):
-        filename = a
+        #filename = a
+        filenames = sorted(glob.glob(a))
     elif o in ("-l"): #lookup a lemma
          lookup_l = a
     elif o in ("-L"): #choose another lexicon file
          greekHDfile = a
-    elif o in ("-o"):
-        outprefix = a
     elif o in ("-v"):
         verbose = True
     elif o in ("-w"): #lookup a word
@@ -346,7 +346,7 @@ strategies = {
     "OLDT"   : "one lemma, but different pos tag",
     "OLST"   : "one lemma, same pos tag",
     "OLNT"   : "one lemma, no tag",
-    "FROG"   : "Frog",
+    "FROG"   : "Frog lemma",
     "UNKNOWN": "unknown"
     }
 
@@ -469,76 +469,84 @@ def compare_postags(tf_tag, l_tag):
         return False
     return extract_postag(tf_tag, l) == extract_postag(l_tag, l)
     
-# ---
+# ---------------------------------
+# Process testfile(s)
+# ---------------------------------
 
 # Test file format:
 # Lines of Greek text
 #
-if not filename:
+if not filenames:
     print( "\nNOTHING TO DO...", file=sys.stderr )
     sys.exit(0)
-else:
+
+for filename in filenames:
+    # Check for my own output
+    if filename.endswith("L.stats.txt") or filename.endswith("L.wlt.txt"):
+        continue
+    
     print( "\nLEMMATISING", filename, file=sys.stderr )
 
-# Output is put into these two files.
-outfile    = outprefix + "-stats.txt"
-outwltfile = outprefix + "-wlt.txt"
+    # Output is put into these two files.
+    outprefix  = filename
+    outfile    = outprefix + ".L.stats.txt"
+    outwltfile = outprefix + ".L.wlt.txt"
 
-# Process test file.
-lcount = 0
-hcount = 0 #count hash lemmas "foo#1"
-wcount = 0 #words processed
-if filename:
-    with open(filename, 'r') as f:
-        with open(outfile, 'w') as of:
-            with open(outwltfile, 'w') as ofwlt:
-                for l in f:
-                    l = l.strip()
-                    if not l:
-                        continue
-                    words = l.split()
-                    for word in words:
-                        # first frog for POS, then lemmatiser
-                        frog_w, frog_l, frog_t = query_frog(word)
-                        if verbose:
-                            print( "frog(", word, "):", frog_w, frog_l, frog_t )
-                        if not frog_l or not frog_t:
-                            print( "NO FROG OUTPUT",  file=sys.stderr )
-                        # try our lemmatiser, with Frog pos tag
-                        the_lemma, ltype = lemmatise( word, frog_t )
-                        # we possibly get (NONE, "UNKNOWN")
-                        if not the_lemma:
-                            #Use frog output for lemma as well
-                            if have_frog and frog_w:
-                                the_lemma = Lemma(word, frog_l, frog_t, 0)
-                                ltype = "FROG"
-                            else:
-                                the_lemma = None
-                                ltype = "UNKNOWN"
-                        ltype = strategies[ltype]
-                        lemmatiser_stats[ltype] += 1
-                        if the_lemma:
+    # Process test file.
+    lcount = 0
+    hcount = 0 #count hash lemmas "foo#1"
+    wcount = 0 #words processed
+    if filename:
+        with open(filename, 'r') as f:
+            with open(outfile, 'w') as of:
+                with open(outwltfile, 'w') as ofwlt:
+                    for l in f:
+                        l = l.strip()
+                        if not l:
+                            continue
+                        words = l.split()
+                        for word in words:
+                            # first frog for POS, then lemmatiser
+                            frog_w, frog_l, frog_t = query_frog(word)
                             if verbose:
-                                print( "lemma =", the_lemma )
-                                print( ltype )
-                            #
-                            ofwlt.write(word+"\t"+the_lemma.lemma+"\t"+the_lemma.tag+"\n")
-                            of.write( word+"\t"+the_lemma.lemma+"\t"+the_lemma.tag+"\t"+repr(the_lemma)+"\t"+ltype+"\n" )
-                        else: #not the_lemma
-                            of.write( word+"\tUNKNOWN\tUNKNOWN\tNONE\t"+ltype+"\n" )
-                            ofwlt.write( word+"\tNONE\tNONE\n" )
-                        wcount += 1
-                    lcount += 1
-                        
-with open(outfile, 'a') as of:
-    print( "#\n# line count", lcount, "word count", wcount, file=of ) 
+                                print( "frog(", word, "):", frog_w, frog_l, frog_t )
+                            if not frog_l or not frog_t:
+                                print( "NO FROG OUTPUT",  file=sys.stderr )
+                            # try our lemmatiser, with Frog pos tag
+                            the_lemma, ltype = lemmatise( word, frog_t )
+                            # we possibly get (NONE, "UNKNOWN")
+                            if not the_lemma:
+                                #Use frog output for lemma as well
+                                if have_frog and frog_w:
+                                    the_lemma = Lemma(word, frog_l, frog_t, 0)
+                                    ltype = "FROG"
+                                else:
+                                    the_lemma = None
+                                    ltype = "UNKNOWN"
+                            ltype = strategies[ltype]
+                            lemmatiser_stats[ltype] += 1
+                            if the_lemma:
+                                if verbose:
+                                    print( "lemma =", the_lemma )
+                                    print( ltype )
+                                #
+                                ofwlt.write(word+"\t"+the_lemma.lemma+"\t"+the_lemma.tag+"\n")
+                                of.write( word+"\t"+the_lemma.lemma+"\t"+the_lemma.tag+"\t"+repr(the_lemma)+"\t"+ltype+"\n" )
+                            else: #not the_lemma
+                                of.write( word+"\tUNKNOWN\tUNKNOWN\tNONE\t"+ltype+"\n" )
+                                ofwlt.write( word+"\tNONE\tNONE\n" )
+                            wcount += 1
+                        lcount += 1
 
-    for stat, count in sorted(lemmatiser_stats.items()):
-    #for stat, count in lemmatiser_stats.most_common():
-        print( "# {0:<60} {1:5n}".format(stat, count), file=of )        
+    with open(outfile, 'a') as of:
+        print( "#\n# line count", lcount, "word count", wcount, file=of ) 
 
-print( "\nOutput in" )
-print( " ", outfile )
-print( " ", outwltfile )
+        for stat, count in sorted(lemmatiser_stats.items()):
+        #for stat, count in lemmatiser_stats.most_common():
+            print( "# {0:<60} {1:5n}".format(stat, count), file=of )        
+
+    print( "\nOutput in" )
+    print( " ", outfile )
+    print( " ", outwltfile )
 
 # -- EOT

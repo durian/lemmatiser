@@ -121,9 +121,10 @@ lookup_w = None
 lookup_l = None
 verbose  = False
 frog_cfg = "frog.ancientgreek.template"
+remove_root = True # default is to remove ROOT from brat files, -R to disable
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "f:l:L:o:vw:DF", [])
+    opts, args = getopt.getopt(sys.argv[1:], "f:l:L:o:vw:DFR", [])
 except getopt.GetoptError as err:
     print(str(err))
     sys.exit(1)
@@ -144,6 +145,8 @@ for o, a in opts:
     elif o in ("-F"):
         have_frog = False #force ignore frog
         frog_cfg = None
+    elif o in ("-R"):
+        remove_root = not remove_root
     else:
         assert False, "unhandled option"
 
@@ -511,7 +514,7 @@ for filename in filenames:
                             continue
                         words = l.split()
                         for word in words:
-                            if word == "ROOT":
+                            if remove_root and word == "ROOT":
                                 continue
                             # first frog for POS, then lemmatiser
                             frog_w, frog_l, frog_t = query_frog(word)

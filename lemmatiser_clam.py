@@ -511,6 +511,8 @@ for filename in filenames:
                             continue
                         words = l.split()
                         for word in words:
+                            if word == "ROOT":
+                                continue
                             # first frog for POS, then lemmatiser
                             frog_w, frog_l, frog_t = query_frog(word)
                             if verbose:

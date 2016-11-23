@@ -520,7 +520,7 @@ for filename in filenames:
                             frog_out = query_frog_sentence(" ".join(words) )
                         for word in words:
                             if verbose:
-                                print( "\n", word, wcount )
+                                print( "\n", word, lcount, wcount )
                             # first frog for POS, then lemmatiser
                             if have_frog:
                                 try:
@@ -554,6 +554,8 @@ for filename in filenames:
                             ltype = strategies[ltype]
                             lemmatiser_stats[ltype] += 1
                             if the_lemma:
+                                # Note that the POS tag here is the one from the lexica,
+                                # and not the one supplied by Frog.
                                 if verbose:
                                     print( "lemma =", the_lemma )
                                     print( ltype )

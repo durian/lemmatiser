@@ -523,7 +523,11 @@ for filename in filenames:
                                 print( "\n", word, wcount )
                             # first frog for POS, then lemmatiser
                             if have_frog:
-                                frog_word = frog_out.pop(0)
+                                try:
+                                    frog_word = frog_out.pop(0)
+                                except IndexError:
+                                    print( "ABORT. FROG OUTPUT EMPTY" )
+                                    sys.exit(1)
                                 if verbose:
                                     print( frog_word )
                                 frog_w = normalize('NFC', frog_word["text"])

@@ -54,5 +54,5 @@ for x in ["lemma correct", "lemma wrong"]:
 
 total_tag = stats["tag correct"] + stats["tag wrong"]
 for x in ["tag correct", "tag wrong"]:
-    print( "# {0:<40} {1:5n} {2:6.2f}".format(x, stats[x], stats[x]*100.0/total_lemma ) ) 
+    print( "# {0:<40} {1:5n} {2:6.2f}".format(x, stats[x], stats[x]*100.0/total_tag ) ) 
 

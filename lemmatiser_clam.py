@@ -69,6 +69,12 @@ DATA STRUCTURES:
 
   Word object contains lemmas{}, indexed by POS-tag.
 
+  Example entry:
+  τῶν, 14
+    τῶν, ὁ, S--p---mg-,  1163
+    τῶν, ὁ, S--p---qg-,   660
+    τῶν, ὁ, S--p---ng-,   211
+
   The lemmatiser looks up a word in the text in ghd_words, and tries 
   to determine the correct lemma based on frequency info and/or POS-tag.
 
@@ -300,17 +306,14 @@ if extrafile:
             word  = normalize('NFC', bits[0])
             lemma = normalize('NFC', bits[1])
             tag   = bits[2]
-            DBG(word, lemma, tag)
             if word in ghd_words.keys():
                 word_entry = ghd_words[word]
                 if tag in word_entry.lemmas: #indexed by tag
                     word_entry.lemmas[tag].freq += 1
-                    DBG("PLUS ONE", lemma, tag)
                 else:
                     new_lemma = Lemma(word, lemma, tag, 1)
                     new_lemma.src = "extra"
                     word_entry.lemmas[tag] = new_lemma
-                    DBG("append entry", word)
             else:
                 word_entry = Word(word)
                 new_lemma = Lemma(word, lemma, tag, freq)
@@ -318,8 +321,7 @@ if extrafile:
                 word_entry.lemmas[tag] = new_lemma
                 ghd_words[word] = word_entry
                 new_entries += 1
-                DBG("new entry", word)
-print( "Added", new_entries, "new entries." )
+print( "Added", new_entries, "new entries.\n" )
 new_entries = 0
 
 # Look up a single word from the lexicon, this is mostly for debugging
@@ -344,17 +346,13 @@ if lookup_l:
             for o in output:
                 print( "  ", o )
 
-if lookup_l or lookup_w:
-    #sys.exit(1)
-    pass
-
-# Print top-3 most lemmas, with top-3 lemma
+# Print top-5 most frequent words, with top-5 lemmas
 if verbose:
     sorted_words = sorted(ghd_words, key=lambda k: len(ghd_words[k].lemmas), reverse=True)
-    for x in sorted_words[0:3]:
+    for x in sorted_words[0:500]:
         print( ghd_words[x], file=sys.stderr )
-        # print top-3 frequent lemmas
-        for l in sorted(ghd_words[x].lemmas.values(), key=attrgetter('freq'), reverse=True)[0:3]:
+        # print top-5 frequent lemmas
+        for l in sorted( sorted(ghd_words[x].lemmas.values(), key=attrgetter('tag'), reverse=False), key=attrgetter('freq'), reverse=True)[0:5]:
             print( " ", l, file=sys.stderr )
 
 # Count lemmatisation stats
@@ -386,16 +384,17 @@ Lemmatiser strategy:
 Check if word in dictionary.
 
 If it is:
-  1) If it has only one lemma entry, return it.
+  1) If it has only one tag/lemma entry, return it.
      ("one lemma, same pos tag" / "one lemma, different pos tag")
-  2) Go through the lemmas:
+  2) More than one tag/lemma entry: go through the tag/lemmas:
      a) if a lemma with a similar pos tag is found, return it.
         ("multiple lemmas, same pos tag, highest frequency" / "multi lemmas, same pos tag, other frequency")
-     b) otherwise, return the most frequent lemma.
+     b) otherwise, return the most frequent tag/lemma.
         ("multi lemmas, different pos tag, highest frequency")
-
+     *) sorting was non-deterministic if same count?
+ 
 If it is not:
-  1) Call Frog (or lookup in Frog list), return it.
+  1) Take Frog entry, and return it.
      ("Frog" / "Frog list")
   2) If this fails:
   return None.
@@ -416,8 +415,9 @@ def lemmatise(word, tag):
             print( "WORD IS IN LEXICON", word_entry )
         # instead of if-then, always take max, but for statistics maybe seperate
         #
-        # Check the number of lemmas for this word. If one, the first one is max. freq.
-        sorted_lemmas = sorted(word_entry.lemmas.values(), key=attrgetter('freq'), reverse=True)
+        # Check the number of lemmas for this word. If one, the first one is also max. freq.
+        #sorted_lemmas = sorted(word_entry.lemmas.values(), key=attrgetter('freq'), reverse=True)
+        sorted_lemmas = sorted( sorted(word_entry.lemmas.values(), key=attrgetter('tag'), reverse=False), key=attrgetter('freq'), reverse=True)
         if verbose:
             print( sorted_lemmas )
         # If only one entry, return it no matter the postag.

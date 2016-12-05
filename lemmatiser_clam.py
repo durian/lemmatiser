@@ -16,6 +16,8 @@ try:
 except:
     print( "No Frog", file=sys.stderr )
 
+VERSION = "1.0.1"
+
 '''
 Lemmatiser -- Work in Progress
 Version with Frog/Python interface, for CLI
@@ -133,9 +135,12 @@ verbose     = False
 wltmode     = False #if true, assume test file is columns; only first token is used
 frog_cfg    = "frog.ancientgreek.template"
 remove_root = True # default is to remove ROOT from brat files, -R to disable
+suffix      = ".L"
+
+callstr = " ".join(sys.argv)
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "f:l:L:o:vw:DE:FM:RW", [])
+    opts, args = getopt.getopt(sys.argv[1:], "f:l:L:o:s:vw:DE:FM:RW", [])
 except getopt.GetoptError as err:
     print(str(err))
     sys.exit(1)
@@ -150,6 +155,8 @@ for o, a in opts:
          nofreqfile = a
     elif o in ("-E"): #choose another extra-wlt (wlt) file
          extrafile = a
+    elif o in ("-s"):
+        suffix = "." + a
     elif o in ("-v"):
         verbose = True
     elif o in ("-w"): #lookup a specific word, print to screen
@@ -165,6 +172,7 @@ for o, a in opts:
         wltmode = True
     else:
         assert False, "unhandled option"
+
 
 # Sanity checks, aborts if specified lexicon files not found.
 files_found = True
@@ -185,6 +193,7 @@ line_count  = 0
 new_entries = 0
 zero_freq   = 0
 doubles     = 0
+conflicts   = 0
 
 print( "READING", greekHDfile, file=sys.stderr )
 with open(greekHDfile, 'r') as f:
@@ -228,7 +237,11 @@ with open(greekHDfile, 'r') as f:
                 # τοσόνδε τοσόσδε Pd-s---na- 0
                 # Normally, if the second one has a lower count, it is ignored.
                 if True or freq > word_entry.lemmas[tag].freq:
-                    print( "IGNORE DOUBLE ENTRY", file=sys.stderr )
+                    if lemma != word_entry.lemmas[tag].lemma:
+                        print( "CONFLICTING DOUBLE ENTRY", file=sys.stderr )
+                        conflicts += 1
+                    else:
+                        print( "DOUBLE ENTRY", file=sys.stderr )
                     print( "STORED", word_entry.lemmas[tag], file=sys.stderr )
                     print( "   NEW", new_lemma, file=sys.stderr )
                     doubles += 1
@@ -244,7 +257,7 @@ with open(greekHDfile, 'r') as f:
             DBG("new entry", word)
 print( "Added", new_entries, "new entries." )
 print( "Counted", zero_freq, "entries with frequency 0." )
-print( "Ignored", doubles, "double entries." )
+print( "Ignored", doubles, "double entries, of which", conflicts, "conflicts." )
 
 new_entries = 0
 if nofreqfile:
@@ -502,8 +515,8 @@ if not filenames:
     sys.exit(0)
 
 for filename in filenames:
-    # Check for my own output
-    if filename.endswith("L.stats.txt") or filename.endswith("L.wlt.txt"):
+    # Check for my own output, a bit crude but prevents the worse mistakes.
+    if filename.endswith(".stats.txt") or filename.endswith(".wlt.txt"):
         continue
     
     print( "\nLEMMATISING", filename, file=sys.stderr )
@@ -515,8 +528,8 @@ for filename in filenames:
 
     # Output is put into these two files.
     outprefix  = filename
-    outfile    = outprefix + ".L.stats.txt"
-    outwltfile = outprefix + ".L.wlt.txt"
+    outfile    = outprefix + suffix +".stats.txt"
+    outwltfile = outprefix + suffix + ".wlt.txt"
 
     # Process test file.
     lcount = 0
@@ -592,6 +605,7 @@ for filename in filenames:
                         lcount += 1
 
     with open(outfile, 'a') as of:
+        print( "#", callstr, "["+VERSION+"]", file=of )
         print( "#\n# line count", lcount, "word count", wcount, file=of ) 
 
         for stat, count in sorted(lemmatiser_stats.items()):

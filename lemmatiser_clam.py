@@ -24,6 +24,8 @@ Version with Frog/Python interface, for CLI
 USAGE:
   lemmatiser.py -f <TEST FILE> -o OUT
   - Loads lexicon file automatically; greek_Haudag.pcases.lemma.lex.
+  - greek_Haudag entries take priority over proiel_v3_perseus_merged.txt
+    and extra-wlt.txt files.
   - Uses Frog for POS tagging and unknown words.
   - Extra word-lemma-tags can be added to extra-wlp.txt (for example
     punctuation).
@@ -61,7 +63,7 @@ TEST FILE:
   Ἁλικαρνησσέος	Ἁλικαρνασσεύς	N--s---mg-
 
 DATA STRUCTURES:
-  Lexicon is contained in ghd_words[].
+  Lexicon is contained in dictionary ghd_words[].
 
   ghd_words["word"] contains a Word object.
 
@@ -90,7 +92,7 @@ def DBG(*strs):
 class Word:
     def __init__(self, w):
         self.word   = normalize('NFC', w)
-        self.lemmas = {} #key is the tag?
+        self.lemmas = {} #key is the tag
     def __repr__(self):
         return "|"+self.word+"|"+str(len(self.lemmas))+"|"
     def __str__(self):
@@ -105,55 +107,60 @@ class Lemma:
         try:
             self.freq  = int(f)
         except ValueError:
-            print( w, l, t )
+            print( "FREQUENCY ERROR", w, l, t )
             sys.exit(1)
     def __repr__(self):
         return "/"+self.word+"/"+self.lemma+"/"+self.tag+"/"+str(self.freq)+"/"+str(self.src)+"/"
     def __str__(self):
         return self.word+", "+self.lemma+", "+self.tag+", "+"{0:5n}".format(self.freq)
 
-greekHDfile = "greek_Haudag.pcases.lemma.lex.rewrite_pluslater"
-ghd_words = {}
+greekHDfile = "greek_Haudag.pcases.lemma.lex.rewrite_20161202"
+ghd_words   = {}
 nofreqfile  = "proiel_v3_perseus_merged.txt"
-filenames = []
-filename  = None # test file
-extrafile = "extra-wlt.txt"
-frog_words = {}
-lookup_w = None
-lookup_l = None
-verbose  = False
-frog_cfg = "frog.ancientgreek.template"
+filenames   = [] #list of globbed files
+filename    = None # test file
+extrafile   = "extra-wlt.txt"
+frog_words  = {}
+lookup_w    = None #specific word to look up
+lookup_l    = None #specific lemma to look up
+verbose     = False
+wltmode     = False #if true, assume test file is columns; only first token is used
+frog_cfg    = "frog.ancientgreek.template"
 remove_root = True # default is to remove ROOT from brat files, -R to disable
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "f:l:L:o:vw:DFR", [])
+    opts, args = getopt.getopt(sys.argv[1:], "f:l:L:o:vw:DE:FM:RW", [])
 except getopt.GetoptError as err:
     print(str(err))
     sys.exit(1)
 for o, a in opts:
     if o in ("-f"):
-        #filename = a
         filenames = sorted(glob.glob(a))
-    elif o in ("-l"): #lookup a lemma
+    elif o in ("-l"): #lookup a specific lemma, print to screen
          lookup_l = a
     elif o in ("-L"): #choose another lexicon file
          greekHDfile = a
+    elif o in ("-M"): #choose another merged (wlt) file
+         nofreqfile = a
+    elif o in ("-E"): #choose another extra-wlt (wlt) file
+         extrafile = a
     elif o in ("-v"):
         verbose = True
-    elif o in ("-w"): #lookup a word
+    elif o in ("-w"): #lookup a specific word, print to screen
         lookup_w = a
     elif o in ("-D"):
         debug = True
-    elif o in ("-F"):
+    elif o in ("-F"): # disables Frog, use also when Frog not available
         have_frog = False #force ignore frog
         frog_cfg = None
     elif o in ("-R"):
         remove_root = not remove_root
+    elif o in ("-W"):
+        wltmode = True
     else:
         assert False, "unhandled option"
 
-# Sanity checks, aborts if lexicon files not found.
-
+# Sanity checks, aborts if specified lexicon files not found.
 files_found = True
 for f in [greekHDfile, filename, nofreqfile, extrafile, frog_cfg]:
     if f and not os.path.exists( f ):
@@ -162,15 +169,18 @@ for f in [greekHDfile, filename, nofreqfile, extrafile, frog_cfg]:
 if not files_found:
     sys.exit(1)
 
+# Initialise Frog.
 if have_frog:
     print( "INITIALISE FROG", file=sys.stderr )
     frog = frog.Frog(frog.FrogOptions(parser=True,tok=False,morph=False,mwu=False,chunking=False,ner=False), frog_cfg )
 
-line_count = 0
+# Statistics on lexicon files.
+line_count  = 0
 new_entries = 0
-zero_freq = 0
-print( "READING", greekHDfile, file=sys.stderr )
+zero_freq   = 0
+doubles     = 0
 
+print( "READING", greekHDfile, file=sys.stderr )
 with open(greekHDfile, 'r') as f:
     '''
     WORD            LEMMA       TAG             COUNT
@@ -200,11 +210,22 @@ with open(greekHDfile, 'r') as f:
             #print( "HAS 0 FREQUENCY", l, file=sys.stderr )
             zero_freq += 1
         DBG(word, lemma, tag, freq)
-        #DBG(ghd_words.keys())
+        # Store it.
         if word in ghd_words.keys():
             word_entry = ghd_words[word]
             new_lemma = Lemma(word, lemma, tag, freq)
             new_lemma.src = "greek_Haudag" #proiel
+            # Note we assume unique word-tag combinations.
+            if tag in word_entry.lemmas:
+                # WHAT
+                # τοσόνδε, τοσόσδε, Pd-s---na-,     5
+                # τοσόνδε τοσόσδε Pd-s---na- 0
+                # Normally, if the second one has a lower count, it is ignored.
+                if True or freq > word_entry.lemmas[tag].freq:
+                    print( "IGNORE DOUBLE ENTRY", file=sys.stderr )
+                    print( "STORED", word_entry.lemmas[tag], file=sys.stderr )
+                    print( "   NEW", new_lemma, file=sys.stderr )
+                    doubles += 1
             word_entry.lemmas[tag] = new_lemma
             DBG("append entry", word)
         else:
@@ -212,16 +233,14 @@ with open(greekHDfile, 'r') as f:
             new_lemma = Lemma(word, lemma, tag, freq)
             new_lemma.src = "greek_Haudag" #"proiel"
             word_entry.lemmas[tag] = new_lemma
-            # Deze p-gevallen lijst bevat woordvorm-pos combinaties
-            # die nog niet in de andere twee proiel gevallen stonden
-            # en deze zijn te herkennen aan hun frequentie van 0 !
             ghd_words[word] = word_entry
             new_entries += 1
             DBG("new entry", word)
 print( "Added", new_entries, "new entries." )
 print( "Counted", zero_freq, "entries with frequency 0." )
-new_entries = 0
+print( "Ignored", doubles, "double entries." )
 
+new_entries = 0
 if nofreqfile:
     print( "\nREADING", nofreqfile, file=sys.stderr )
     with open(nofreqfile, 'r') as f:
@@ -469,7 +488,8 @@ def compare_postags(tf_tag, l_tag):
     if l == 0:
         return False
     return extract_postag(tf_tag, l) == extract_postag(l_tag, l)
-    
+
+        
 # ---------------------------------
 # Process testfile(s)
 # ---------------------------------
@@ -511,6 +531,9 @@ for filename in filenames:
                         if not l:
                             continue
                         words = l.split()
+                        # we need a "wlt" mode for hdt text. and check results
+                        if wltmode:
+                            words = [words[0]] 
                         if verbose:
                             print( "words", words )
                         if remove_root and words and words[0] == "ROOT":

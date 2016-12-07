@@ -16,7 +16,7 @@ try:
 except:
     print( "No Frog", file=sys.stderr )
 
-VERSION = "1.1.5"
+VERSION = "1.1.6"
 
 '''
 Lemmatiser -- Work in Progress
@@ -146,16 +146,19 @@ class Lexicon:
                     # inc the frequency/merge, or ignore?
                     #stored_lemma = lemmas[lemma]
                     #stored_lemma.freq += freq
-                    self.updated_lemma += 1
+                    #self.updated_lemma += 1
+                    DBG( "UPDATE LEMMA", new_lemma )
                 else:
                     # new lemma for word-tag combination
                     word_entry[tag][lemma] = new_lemma
                     self.added_lemma += 1
+                    DBG( "ADD LEMMA", new_lemma )
             else:
                 # new tag+lemma for word
                 word_entry[tag] = {}
                 word_entry[tag][lemma] = new_lemma
                 self.added_tag += 1
+                DBG( "ADD TAG", new_lemma )
         else:
             # new word
             self.words[word] = {}
@@ -163,6 +166,7 @@ class Lexicon:
             self.words[word][tag][lemma] = new_lemma
             self.added_word += 1
             self.wcount += 1
+            DBG( "ADD WORD", new_lemma )
         DBG( self )
     def lookup(self, w):
         try:
@@ -171,7 +175,9 @@ class Lexicon:
             for tag in tags:
                 for x in tags[tag]:
                     res.append( tags[tag][x] )
-            return sorted(res, key=attrgetter('freq'), reverse=True )
+            #return sorted(res, key=attrgetter('freq'), reverse=True )
+            return sorted(sorted(res, key=attrgetter('tag')), key=attrgetter('freq'), reverse=True)
+    
         except KeyError:
             return []
     def dump(self, minl=0, minc=0):

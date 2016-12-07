@@ -16,7 +16,7 @@ try:
 except:
     print( "No Frog", file=sys.stderr )
 
-VERSION = "1.1.6"
+VERSION = "1.1.7"
 
 '''
 Lemmatiser -- Work in Progress
@@ -292,7 +292,7 @@ if greekHDfile:
                 zero_freq += 1
             #
             DBG(word, lemma, tag, freq, "greek_Haudag")
-            ghd_words.add(word, lemma, tag, freq)
+            ghd_words.add(word, lemma, tag, freq, "greek_Haudag")
     print( ghd_words )
 
 new_entries = 0

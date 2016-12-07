@@ -16,7 +16,7 @@ try:
 except:
     print( "No Frog", file=sys.stderr )
 
-VERSION = "1.0.1"
+VERSION = "1.2.0"
 
 '''
 Lemmatiser -- Work in Progress
@@ -337,32 +337,10 @@ if extrafile:
 print( "Added", new_entries, "new entries.\n" )
 new_entries = 0
 
-# Look up a single word from the lexicon, this is mostly for debugging
-# and/or introspective purposes.
-if lookup_w:
-    print( "\nLOOKUP WORD", lookup_w )
-    if lookup_w in ghd_words:
-        print( "  ", ghd_words[lookup_w] )
-        for l in sorted(ghd_words[lookup_w].lemmas.values(), key=attrgetter('freq'), reverse=True):
-            print( "    ", l )
-
-# Look up a single lemma in all words
-if lookup_l:
-    print( "\nLOOKUP LEMMA", lookup_l )
-    for x in ghd_words:
-        output = []
-        for l in sorted(ghd_words[x].lemmas.values(), key=attrgetter('freq'), reverse=True):
-            if l.lemma == lookup_l:
-                output.append(l);
-        if output:
-            print( x )
-            for o in output:
-                print( "  ", o )
-
 # Print top-5 most frequent words, with top-5 lemmas
 if verbose:
     sorted_words = sorted(ghd_words, key=lambda k: len(ghd_words[k].lemmas), reverse=True)
-    for x in sorted_words[0:500]:
+    for x in sorted_words[0:5]:
         print( ghd_words[x], file=sys.stderr )
         # print top-5 frequent lemmas
         for l in sorted( sorted(ghd_words[x].lemmas.values(), key=attrgetter('tag'), reverse=False), key=attrgetter('freq'), reverse=True)[0:5]:
@@ -506,6 +484,29 @@ def compare_postags(tf_tag, l_tag):
 # ---------------------------------
 # Process testfile(s)
 # ---------------------------------
+
+# Look up a single word from the lexicon, this is mostly for debugging
+# and/or introspective purposes.
+if lookup_w:
+    print( "\nLOOKUP WORD", lookup_w )
+    if lookup_w in ghd_words:
+        print( "  ", ghd_words[lookup_w] )
+        for l in sorted(ghd_words[lookup_w].lemmas.values(), key=attrgetter('freq'), reverse=True):
+            print( "    ", l )
+
+# Look up a single lemma in all words
+if lookup_l:
+    print( "\nLOOKUP LEMMA", lookup_l )
+    for x in ghd_words:
+        output = []
+        for l in sorted(ghd_words[x].lemmas.values(), key=attrgetter('freq'), reverse=True):
+            if l.lemma == lookup_l:
+                output.append(l);
+        if output:
+            print( x )
+            for o in output:
+                print( "  ", o )
+    print( lemmatise(lookup_l, "") )
 
 # Test file format:
 # Lines of Greek text

@@ -6,9 +6,10 @@ import getopt, sys, os
 from unicodedata import normalize
 
 '''
-THIS ONE READS COLUMN FORMAT
+THIS ONE READS COLUMN FORMAT. THIS PROBABLY AFFECTS THE TAGGER (CONTEXT).
+
 (venv) durian:lemmatiser_new pberck
-python3 lemmatiser_cltk.py  -f hdt_Books_forFrog.col.nutt
+python3 lemmatiser_cltk2.py  -f hdt_Books_forFrog.col.nutt
 '''
 
 debug = False
@@ -58,5 +59,5 @@ with open(filename, 'r') as f:
             # καὶ [('καὶ', 'C--------')]
             # δι’ [('δι', None), ('’', '---------')]
             tag   = cltk_tagger.tag_ngram_123_backoff( w )[0]
-            print( w, "\t", lemma, "\t", tag[1], file=of )
+            print( w, "\t", lemma[0], "\t", tag[1], file=of )
             lc += 1

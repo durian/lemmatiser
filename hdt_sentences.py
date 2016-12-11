@@ -29,11 +29,12 @@ with open(filename, 'r') as f:
     with open(outfilename, 'w') as of:
         for l in f:
             l = l.strip()
-            if l.startswith("<utt>"):
+            lr  = l.replace("’", "") #this ’ causes problems for CLTK tagger
+            if lr.startswith("<utt>"):
                 print( " ".join(s), file=of )
                 s = []
                 continue
-            bits = l.split()
+            bits = lr.split()
             if len(bits) != 3:
                 continue
             s.append( bits[0] )

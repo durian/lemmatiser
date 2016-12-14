@@ -13,10 +13,11 @@ def DBG(*strs):
 
 testfilename = None # -wlt.txt
 goldfilename = None
-statsmode = False # if -wlt is relly -stats
+statsmode = False # if -wlt is really -stats, count strategies
+taglen = 255 #compare full tags, otherwise length specified
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "f:g:s", [])
+    opts, args = getopt.getopt(sys.argv[1:], "f:g:st:", [])
 except getopt.GetoptError as err:
     print(str(err))
     sys.exit(1)
@@ -27,6 +28,8 @@ for o, a in opts:
          goldfilename = a
     elif o in ("-s"): #lookup a lemma
          statsmode = True
+    elif o in ("-t"): #lookup a lemma
+         taglen = int(a)
     else:
         assert False, "unhandled option"
 
@@ -42,8 +45,8 @@ with open(testfilename, 'r') as f:
                 continue
             fl = fl.strip()
             gl = gl.strip()
-            fbits = fl.split('\t')
-            gbits = gl.split('\t')
+            fbits = fl.split()
+            gbits = gl.split()
             if not statsmode:
                 if len(fbits) != 3 or len(gbits) != 3:
                     continue
@@ -53,7 +56,7 @@ with open(testfilename, 'r') as f:
                 else:
                     stats["lemma wrong"] += 1
                 # Tag
-                if fbits[2] == gbits[2]:
+                if fbits[2][0:taglen] == gbits[2][0:taglen]:
                     stats["tag correct"] += 1
                 else:
                     stats["tag wrong"] += 1
@@ -75,7 +78,7 @@ with open(testfilename, 'r') as f:
                     continue
                 corpus = tbits[5]
                 #print( "["+fbits[2]+"]", "["+gbits[2]+"]")
-                if fbits[2] == gbits[2]: #fbits[2] or tbits[3]
+                if fbits[2][0:taglen] == gbits[2][0:taglen]: #fbits[2] or tbits[3]
                     stats["tag correct"] += 1
                     stats["tag correct"+"/"+corpus] += 1
                     stats[fbits[4]+"/correct"] += 1

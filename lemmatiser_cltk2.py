@@ -26,6 +26,8 @@ except:
     print(" No CLTK toolkit found." )
     sys.exit(1)
 
+print( "CLTK ok." )
+
 filename = None
 
 try:
@@ -54,10 +56,15 @@ with open(filename, 'r') as f:
                 continue
             w = normalize('NFC', bits[0])
             l = normalize('NFC', bits[1])
-            t = normalize('NFC', bits[2])
-            lemma = cltk_lemmatiser.lemmatize( w )
+            t = bits[2]
+            lemma = cltk_lemmatiser.lemmatize( w )[0]
+            #tag   = cltk_tagger.tag_ngram_123_backoff( w )[0]
+            tag   = cltk_tagger.tag_tnt( w )[0]
+            # tags are all caps
             # καὶ [('καὶ', 'C--------')]
             # δι’ [('δι', None), ('’', '---------')]
-            tag   = cltk_tagger.tag_ngram_123_backoff( w )[0]
-            print( w, "\t", lemma[0], "\t", tag[1], file=of )
+            if '#' in lemma:
+                hidx = lemma.find('#')
+                lemma = lemma[0:hidx]
+            print( w, "\t", lemma, "\t", tag[1], file=of )
             lc += 1

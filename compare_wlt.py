@@ -5,6 +5,8 @@ import re
 import getopt, sys, os
 from collections import Counter
 
+# versions
+# 2016-12-15 added -t option.
 
 debug = False
 def DBG(*strs):

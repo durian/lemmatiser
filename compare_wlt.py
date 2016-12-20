@@ -35,6 +35,12 @@ for o, a in opts:
     else:
         assert False, "unhandled option"
 
+def remove_hash(lemma):
+    if '#' in lemma:
+        hidx = lemma.find('#')
+        lemma = lemma[0:hidx]
+    return lemma
+
 stats = Counter()
 
 with open(testfilename, 'r') as f:
@@ -61,10 +67,12 @@ with open(testfilename, 'r') as f:
                         print( gl )
                         sys.exit(1)
                 # Lemma
-                if fbits[1] == gbits[1]:
+                if remove_hash(fbits[1]) == remove_hash(gbits[1]):
                     stats["lemma correct"] += 1
                 else:
                     stats["lemma wrong"] += 1
+                    print( fl )
+                    print( gl )
                 # Tag
                 if fbits[2][0:taglen] == gbits[2][0:taglen]:
                     stats["tag correct"] += 1
@@ -86,7 +94,7 @@ with open(testfilename, 'r') as f:
                         print( gl )
                         sys.exit(1)                
                 # Lemma, also pos 1
-                if fbits[1] == gbits[1]:
+                if remove_hash(fbits[1]) == remove_hash(gbits[1]):
                     stats["lemma correct"] += 1
                 else:
                     stats["lemma wrong"] += 1

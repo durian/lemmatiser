@@ -15,7 +15,7 @@ def DBG(*strs):
 
 testfilename = None # -wlt.txt
 goldfilename = None
-statsmode = False # if -wlt is really -stats, count strategies
+statsmode = False # if -wlt is really -stats, count strategies. Gold is assumed wlt only.
 taglen = 255 #compare full tags, otherwise length specified
 
 try:
@@ -47,11 +47,19 @@ with open(testfilename, 'r') as f:
                 continue
             fl = fl.strip()
             gl = gl.strip()
-            fbits = fl.split()
-            gbits = gl.split()
+            fbits = fl.split('\t')
+            gbits = gl.split('\t')
+            #
             if not statsmode:
-                if len(fbits) != 3 or len(gbits) != 3:
+                if len(fbits) < 3 or len(gbits) < 3: #need at least 3
                     continue
+                # compare word to make sure we are comparing the same data
+                if fbits[0] != gbits[0]:
+                    if not "," in fbits[0]:
+                        print( "DATA DIFF." )
+                        print( fl )
+                        print( gl )
+                        sys.exit(1)
                 # Lemma
                 if fbits[1] == gbits[1]:
                     stats["lemma correct"] += 1
@@ -66,8 +74,17 @@ with open(testfilename, 'r') as f:
             else:
                 # Ἡροδότου        Ἡρόδοτος        Ne-s---mg-      /Ἡροδότου/Ἡρόδοτος/Ne-s---mg-/1/greek_Haudag/   one lemma, but different pos tag
                 if len(fbits) != 5 or len(gbits) != 3:
-                    print( fl, gl )
+                    print( len(fbits), fl )
+                    print( len(gbits), gl )
+                    sys.exit(1)
                     continue
+                # compare word to make sure we are comparing the same data
+                if fbits[0] != gbits[0]:
+                    if not "," in fbits[0]:
+                        print( "DATA DIFF." )
+                        print( fl )
+                        print( gl )
+                        sys.exit(1)                
                 # Lemma, also pos 1
                 if fbits[1] == gbits[1]:
                     stats["lemma correct"] += 1
@@ -99,10 +116,12 @@ for stat, count in sorted(stats.items()):
     print( "# {0:<71} {1:5n}".format(stat, count) )
             
 total_lemma = stats["lemma correct"] + stats["lemma wrong"]
-for x in ["lemma correct", "lemma wrong"]:
-    print( "# {0:<40} {1:5n} {2:6.2f}".format(x, stats[x], stats[x]*100.0/total_lemma ) ) 
+if total_lemma > 0:
+    for x in ["lemma correct", "lemma wrong"]:
+        print( "# {0:<40} {1:5n} {2:6.2f}".format(x, stats[x], stats[x]*100.0/total_lemma ) ) 
 
 total_tag = stats["tag correct"] + stats["tag wrong"]
-for x in ["tag correct", "tag wrong"]:
-    print( "# {0:<40} {1:5n} {2:6.2f}".format(x, stats[x], stats[x]*100.0/total_tag ) ) 
+if total_tag > 0:
+    for x in ["tag correct", "tag wrong"]:
+        print( "# {0:<40} {1:5n} {2:6.2f}".format(x, stats[x], stats[x]*100.0/total_tag ) ) 
 

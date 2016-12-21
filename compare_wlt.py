@@ -7,6 +7,7 @@ from collections import Counter
 
 # versions
 # 2016-12-15 added -t option.
+# 2016-12-19 Fixes and improvements
 
 debug = False
 def DBG(*strs):
@@ -25,12 +26,12 @@ except getopt.GetoptError as err:
     sys.exit(1)
 for o, a in opts:
     if o in ("-f"):
-        testfilename = a
-    elif o in ("-g"): #lookup a lemma
+        testfilename = a # wlt output
+    elif o in ("-g"): # gold set, always wlt format
          goldfilename = a
-    elif o in ("-s"): #lookup a lemma
+    elif o in ("-s"): # the "-f FILE" is a stats file from lemmatiser
          statsmode = True
-    elif o in ("-t"): #lookup a lemma
+    elif o in ("-t"): #length of pos tag to compare, "-t 1" for first char only
          taglen = int(a)
     else:
         assert False, "unhandled option"
@@ -71,8 +72,6 @@ with open(testfilename, 'r') as f:
                     stats["lemma correct"] += 1
                 else:
                     stats["lemma wrong"] += 1
-                    print( fl )
-                    print( gl )
                 # Tag
                 if fbits[2][0:taglen] == gbits[2][0:taglen]:
                     stats["tag correct"] += 1
@@ -81,14 +80,13 @@ with open(testfilename, 'r') as f:
                 stats["lines"] += 1
             else:
                 # Ἡροδότου        Ἡρόδοτος        Ne-s---mg-      /Ἡροδότου/Ἡρόδοτος/Ne-s---mg-/1/greek_Haudag/   one lemma, but different pos tag
-                if len(fbits) != 5 or len(gbits) != 3:
+                if len(fbits) != 5 or len(gbits) != 3: # gold file always 3...
                     print( len(fbits), fl )
                     print( len(gbits), gl )
                     sys.exit(1)
-                    continue
                 # compare word to make sure we are comparing the same data
                 if fbits[0] != gbits[0]:
-                    if not "," in fbits[0]:
+                    if not "," in fbits[0]: # The frog output had quotes around the ","
                         print( "DATA DIFF." )
                         print( fl )
                         print( gl )
@@ -104,6 +102,7 @@ with open(testfilename, 'r') as f:
                 if len(tbits) != 7:
                     continue
                 corpus = tbits[5]
+                stats[corpus] += 1
                 #print( "["+fbits[2]+"]", "["+gbits[2]+"]")
                 if fbits[2][0:taglen] == gbits[2][0:taglen]: #fbits[2] or tbits[3]
                     stats["tag correct"] += 1

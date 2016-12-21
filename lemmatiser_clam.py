@@ -16,7 +16,7 @@ try:
 except:
     print( "No Frog", file=sys.stderr )
 
-VERSION = "1.2.2"
+VERSION = "1.2.3"
 
 '''
 Lemmatiser -- Work in Progress
@@ -24,7 +24,7 @@ Version with Frog/Python interface, for CLI
 -------------------------------------------
 
 USAGE:
-  lemmatiser.py -f <TEST FILE> -o OUT
+  lemmatiser.py -f <TEST FILE> -s OUT
   - Loads lexicon file automatically; greek_Haudag.pcases.lemma.lex.
   - greek_Haudag entries take priority over proiel_v3_perseus_merged.txt
     and extra-wlt.txt files.
@@ -139,10 +139,6 @@ suffix      = ".L"
 
 callstr = " ".join(sys.argv)
 
-logfile     = "lemmatiser.log"
-lgf = open(logfile, "w") #or append?
-print( callstr, file=lgf, flush=True )
-
 try:
     opts, args = getopt.getopt(sys.argv[1:], "f:l:L:s:vw:DE:FM:RW", [])
 except getopt.GetoptError as err:
@@ -177,11 +173,15 @@ for o, a in opts:
     else:
         assert False, "unhandled option"
 
+logfile     = "lemmatiser"+suffix+".log"
+lgf = open(logfile, "w") #or append?
+print( callstr, file=lgf, flush=True )
 
 # Sanity checks, aborts if specified lexicon files not found.
 files_found = True
 for f in [greekHDfile, filename, nofreqfile, extrafile, frog_cfg]:
     if f and not os.path.exists( f ):
+        print( "ERROR: FILE NOT FOUND:", f, file=lgf, flush=True )
         print( "ERROR: FILE NOT FOUND:", f, file=sys.stderr )
         files_found = False
 if not files_found:

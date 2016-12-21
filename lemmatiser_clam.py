@@ -16,7 +16,7 @@ try:
 except:
     print( "No Frog", file=sys.stderr )
 
-VERSION = "1.2.1"
+VERSION = "1.2.2"
 
 '''
 Lemmatiser -- Work in Progress
@@ -141,10 +141,10 @@ callstr = " ".join(sys.argv)
 
 logfile     = "lemmatiser.log"
 lgf = open(logfile, "w") #or append?
-print( callstr, file=lgf )
+print( callstr, file=lgf, flush=True )
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "f:l:L:o:s:vw:DE:FM:RW", [])
+    opts, args = getopt.getopt(sys.argv[1:], "f:l:L:s:vw:DE:FM:RW", [])
 except getopt.GetoptError as err:
     print(str(err))
     sys.exit(1)
@@ -201,7 +201,7 @@ doubles     = 0
 conflicts   = 0
 
 print( "READING", greekHDfile, file=sys.stderr )
-print( "READING", greekHDfile, file=lgf )
+print( "READING", greekHDfile, file=lgf, flush=True )
 with open(greekHDfile, 'r') as f:
     '''
     WORD            LEMMA       TAG             COUNT
@@ -212,11 +212,11 @@ with open(greekHDfile, 'r') as f:
     for l in f:
         l = l.strip()
         if len(l) > 0 and l[0] == "#":
-            print( "SKIP COMMENT", l, file=lgf )
+            print( "SKIP COMMENT", l, file=lgf, flush=True )
             continue
         bits = l.split()
         if len(bits) != 4:
-            print( "SKIP NOT 4 FIELDS", l, file=lgf )
+            print( "SKIP NOT 4 FIELDS", l, file=lgf, flush=True )
             continue
         line_count += 1
         word  = normalize('NFC', bits[0])
@@ -225,10 +225,10 @@ with open(greekHDfile, 'r') as f:
         try:
             freq  = int(bits[3])
         except ValueError:
-            print( "SKIP FREQUENCY ERROR", l, file=lgf )
+            print( "SKIP FREQUENCY ERROR", l, file=lgf, flush=True )
             continue
         if freq == 0:
-            #print( "HAS 0 FREQUENCY", l, file=lgf )
+            #print( "HAS 0 FREQUENCY", l, file=lgf, flush=True )
             zero_freq += 1
         DBG(word, lemma, tag, freq)
         # Store it.
@@ -244,12 +244,12 @@ with open(greekHDfile, 'r') as f:
                 # Normally, if the second one has a lower count, it is ignored.
                 if True or freq > word_entry.lemmas[tag].freq:
                     if lemma != word_entry.lemmas[tag].lemma:
-                        print( "CONFLICTING DOUBLE ENTRY", file=lgf )
+                        print( "CONFLICTING DOUBLE ENTRY", file=lgf, flush=True )
                         conflicts += 1
                     else:
-                        print( "DOUBLE ENTRY", file=lgf )
-                    print( "STORED", word_entry.lemmas[tag], file=lgf )
-                    print( "   NEW", new_lemma, file=lgf )
+                        print( "DOUBLE ENTRY", file=lgf, flush=True )
+                    print( "STORED", word_entry.lemmas[tag], file=lgf, flush=True )
+                    print( "   NEW", new_lemma, file=lgf, flush=True )
                     doubles += 1
             word_entry.lemmas[tag] = new_lemma
             DBG("append entry", word)
@@ -261,23 +261,23 @@ with open(greekHDfile, 'r') as f:
             ghd_words[word] = word_entry
             new_entries += 1
             DBG("new entry", word)
-print( "Added", new_entries, "new entries.", file=lgf )
-print( "Counted", zero_freq, "entries with frequency 0.", file=lgf )
-print( "Ignored", doubles, "double entries, of which", conflicts, "conflicts.", file=lgf )
+print( "Added", new_entries, "new entries.", file=lgf, flush=True )
+print( "Counted", zero_freq, "entries with frequency 0.", file=lgf, flush=True )
+print( "Ignored", doubles, "double entries, of which", conflicts, "conflicts.", file=lgf, flush=True )
 
 new_entries = 0
 if nofreqfile:
     print( "READING", nofreqfile, file=sys.stderr )
-    print( "READING", nofreqfile, file=lgf )
+    print( "READING", nofreqfile, file=lgf, flush=True )
     with open(nofreqfile, 'r') as f:
         for l in f:
             l = l.strip()
             if len(l) > 0 and l[0] == "#":
-                print( "SKIP", l, file=lgf )
+                print( "SKIP", l, file=lgf, flush=True )
                 continue
             bits = l.split()
             if len(bits) != 3:
-                print( "SKIP", l, file=lgf )
+                print( "SKIP", l, file=lgf, flush=True )
                 continue
             line_count += 1
             word  = normalize('NFC', bits[0])
@@ -304,7 +304,7 @@ if nofreqfile:
                 ghd_words[word] = word_entry
                 new_entries += 1
                 DBG("new entry", word)
-print( "Added", new_entries, "new entries.", file=lgf )
+print( "Added", new_entries, "new entries.", file=lgf, flush=True )
 new_entries = 0
 
 # At the moment we have punctuation here.
@@ -312,16 +312,16 @@ new_entries = 0
 #
 if extrafile:
     print( "READING", extrafile, file=sys.stderr )
-    print( "READING", extrafile, file=lgf )
+    print( "READING", extrafile, file=lgf, flush=True )
     with open(extrafile, 'r') as f:
         for l in f:
             l = l.strip()
             if len(l) > 0 and l[0] == "#":
-                print( "SKIP COMMENT", l, file=lgf )
+                print( "SKIP COMMENT", l, file=lgf, flush=True )
                 continue
             bits = l.split()
             if len(bits) != 3:
-                print( "SKIP NOT 3 FIELDS", l, file=lgf )
+                print( "SKIP NOT 3 FIELDS", l, file=lgf, flush=True )
                 continue
             line_count += 1
             word  = normalize('NFC', bits[0])
@@ -342,7 +342,7 @@ if extrafile:
                 word_entry.lemmas[tag] = new_lemma
                 ghd_words[word] = word_entry
                 new_entries += 1
-print( "Added", new_entries, "new entries.\n", file=lgf )
+print( "Added", new_entries, "new entries.\n", file=lgf, flush=True )
 new_entries = 0
 
 # Print top-5 most frequent words, with top-5 lemmas
@@ -530,7 +530,7 @@ for filename in filenames:
         continue
     
     print( "\nLEMMATISING", filename, file=sys.stderr )
-    print( "LEMMATISING", filename, file=lgf )
+    print( "LEMMATISING", filename, file=lgf, flush=True )
 
     # Reset Counters
     lemmatiser_stats["unknown"] = 0
@@ -616,16 +616,16 @@ for filename in filenames:
                         lcount += 1
 
     with open(outfile, 'a') as of:
-        print( "#", callstr, "["+VERSION+"]", file=of )
-        print( "#\n# line count", lcount, "word count", wcount, file=of ) 
+        print( "#", callstr, "["+VERSION+"]", file=of, flush=True )
+        print( "#\n# line count", lcount, "word count", wcount, file=of, flush=True ) 
 
         for stat, count in sorted(lemmatiser_stats.items()):
         #for stat, count in lemmatiser_stats.most_common():
-            print( "# {0:<60} {1:5n}".format(stat, count), file=of )        
+            print( "# {0:<60} {1:5n}".format(stat, count), file=of, flush=True )        
 
-    print( "\nOutput in", file=lgf )
-    print( " ", outfile, file=lgf )
-    print( " ", outwltfile, file=lgf )
+    print( "\nOutput in", file=lgf, flush=True )
+    print( " ", outfile, file=lgf, flush=True )
+    print( " ", outwltfile, file=lgf, flush=True )
     print( "\nOutput in", file=sys.stderr )
     print( " ", outfile, file=sys.stderr )
     print( " ", outwltfile, file=sys.stderr )

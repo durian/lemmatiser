@@ -45,7 +45,7 @@ pfile = "perseus-wlt.txt"
 simplify = False
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "f:p:", [])
+    opts, args = getopt.getopt(sys.argv[1:], "f:p:s", [])
 except getopt.GetoptError as err:
     print(str(err))
     sys.exit(1)
@@ -54,6 +54,8 @@ for o, a in opts:
         afile = a
     elif o in ("-p"):
         pfile = a
+    elif o in ("-s"):
+        simplify = True
     else:
         assert False, "unhandled option"
 

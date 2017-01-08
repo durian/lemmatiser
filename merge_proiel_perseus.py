@@ -4,21 +4,14 @@
 # 2016-06-15:
 #  python3 merge_proiel_perseus.py -f greek_Haudag.pcases.lemma.lex.rewrite -F perseus-wlt.txt > proiel_v2_perseus_merged.txt
 #
+# 2017-01-08 We made a new greek_Haudag.pcases.lemma.lex.rewrite_new, so a new merge
+
 import re
 import getopt, sys, os
 from collections import Counter
 
 '''
-SurfdriveRadboud/Shared/GreekPerspectives/Software/Lemmatizer/Scripts:
-python3 ~/work/lemmatiser/merge_proiel_perseus.py -f proiel.out.txt -F d638f82gs4.txt.utf8b.rwrt >proiel_perseus_merged.txt
-
-Output:
-ὀψοποιία οψοποιια N--s---fa-
-ὀψοποιία οψοποιια N--d---fa-
-γραφαὶ γραφή Nb-p---fn-
-πωρόω πωροω V-3spoa---
-πωρόω πωροω V-3siia---
-πωρόω πωροω V-2sfim---
+This one merges w/o counts.... need a new version? Is it stil relevant?
 '''
 
 proifile = None
@@ -49,7 +42,7 @@ with open(proifile, 'r') as f:
     for l in f:
         l = l.strip()
         bits = l.split()
-        if len(bits) != 3:
+        if len(bits) != 4: #or 3? Counts are ignored anyway?, the rewrite_new has counts
             continue
         proi_w[bits[0]] += 1 #words
         proi_l[bits[1]] += 1 #lemma

@@ -48,7 +48,7 @@ class Complement:
     def __repr__(self):
         return "|"+self.id+"|"
     def __str__(self):
-        return "Complement:"+self.id+" type:"+self.type+" words:"+str(len(self.words))+" span:"+repr(self.span)
+        return "Complement:"+self.id+" head:"+repr(self.head)+" type:"+self.type+" words:"+str(len(self.words)) #+" span:"+repr(self.span)
     
 filenames = [] # Should be the *.txt files, and we figure out the .ann names from these
 filename  = None
@@ -72,7 +72,10 @@ stats["sc"] = 0 # sentence count
 stats["compl"] = 0 # number of complements
 stats["compl_i"] = 0 # indirect
 stats["compl_d"] = 0 # direct
-stats["compl_np"] = 0 
+stats["compl_np"] = 0
+stats["compl_wc"] = 0 # complements, word count
+stats["compl_wc_i"] = 0 # indirect complements, word count
+stats["compl_wc_d"] = 0 # indirect complements, word count
 
 long = {}
 long["fc"] = "Aantal bestanden"
@@ -80,9 +83,13 @@ long["wc"] = "Aantal woorden"
 long["sc"] = "Aantal zinnen"
 #
 long["compl"] = "Aantal 'Complement' annotaties"
-long["compl_i"] = "Aantal indirekte 'Complement' annotaties"
-long["compl_d"] = "Aantal direkte 'Complement' annotaties"
+long["compl_i"] = "Aantal indirecte 'Complement' annotaties"
+long["compl_d"] = "Aantal directe 'Complement' annotaties"
 long["compl_np"] = "Aantal NP 'Complement' annotaties"
+long["compl_wc"] = "Aantal woorden in Complementen"
+long["compl_wc_i"] = "Aantal woorden in indirecte Complementen"
+long["compl_wc_d"] = "Aantal woorden in directe Complementen"
+
 # ----
 # Process
 # ----
@@ -129,7 +136,7 @@ for filename in filenames:
                 words = [ normalize('NFC', w) for w in bits[2].split() ]
             else:
                 words = []
-            if ann_type == "Complement": #compl-head compl-chunk ?
+            if ann_type == "Complement": #compl-head compl-chunk ? how does chunk relate to Compl?
                 # Write out/count the current complement
                 # Or save all of them, because the order is random in the .ann files?
                 complements[ann_id] = Complement(ann_id)
@@ -147,8 +154,8 @@ for filename in filenames:
                         print( "ERROR" )
                         sys.exit(2)
                 stats["compl"] += 1
-                complements[ann_id].words = words
-                print( complements[ann_id] )
+                complements[ann_id].words = words # this includes "," etc
+                stats["compl_wc"] += len(words)
             # We build up the Complements first, count when file is done
             if ann_type == "compl-type":
                 # compl-type T6 indirect
@@ -156,10 +163,41 @@ for filename in filenames:
                 compl_id   = ann_info[1] #points to the Complement id
                 compl_type = ann_info[2]
                 complements[compl_id].type = compl_type
-                print( complements[compl_id] )
+            # head info
+            # T20	Compl-head 197 204	ἐσῆλθον
+            # R5	compl-head Arg1:T20 Arg2:T18
+            # Here we scan positions, using Arg1/Arg2 is maybe easier, but Compl-head
+            # still needs to be scanned to get the head-word itself.
+            if ann_id[0] == "T" and ann_type == "Compl-head": # uppercase Compl is enough?
+                # scan the span, and see in which complement it occurs.
+                span = ann_info[1:] # The numbers after "Compl-head"
+                span0 = int(span[0])
+                span1 = int(span[1])
+                #print( ann_info, span0, span1 )
+                # Find the Complement (try them all as we don't know the order in the .ann file)
+                for c_id in complements:
+                    c = complements[c_id]
+                    for c_span in c.span:
+                        if c_span[0] <= span0 <= c_span[1] and c_span[0] <= span1 <= c_span[1]:
+                            complements[c_id].head = words[0] # assume head is one word
+    # Complements for this file, and add to the global statistics
+    for c in complements:
+        print( complements[c] )
+        stats["compl_wc"] += len(complements[c].words)
+        if complements[c].type == "indirect":
+            stats["compl_wc_i"] += len(complements[c].words)
+        elif complements[c].type == "direct":
+            stats["compl_wc_d"] += len(complements[c].words)
 
 for stat, count in sorted(stats.items()):
-    try:
-        print( "{0:<40} {1:5n}".format(long[stat], count) )
-    except KeyError:
-        print( "# {0:<40} {1:5n}".format(stat, count) )
+    if stat.startswith("compl_wc"):
+        average = float(count) / stats["compl"]
+        try:
+            print( "{0:<50} {1:>5n} {2:>6.2f}".format(long[stat], count, average) )
+        except KeyError:
+            print( "# {0:<48} {1:>5n} {2:>6.2f}".format(stat, count, average) )
+    else:
+        try:
+            print( "{0:<50} {1:>5n} ".format(long[stat], count) )
+        except KeyError:
+            print( "# {0:<48} {1:>5n} ".format(stat, count) )

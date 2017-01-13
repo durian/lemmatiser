@@ -25,9 +25,16 @@ do attitude verbs occur with direct complements?
 do δὴ and δή occur in complements? (mogen samen genomen worden)
 do γὰρ and γάρ occur in a complement after root (mogen samengenomen worden, hoeft niet per se meteen achter root, maar ergens daarna)
 
+# -----
+
+We should count both .txt and .ann files.
+
+The .txt files for the general statistics, number of sentences/words, etc.
+
+The .ann files to count the complements etc.
 '''
 
-filenames = []
+filenames = [] # Should be the *.txt files, and we figure out the .ann names from these
 filename  = None
 
 try:
@@ -45,13 +52,25 @@ stats = Counter()
 stats["fc"] = 0 # file count
 stats["wc"] = 0 # word count
 stats["sc"] = 0 # sentence count
+#
+stats["compl"] = 0 # number of complements
 
 long = {}
 long["fc"] = "Aantal bestanden"
 long["wc"] = "Aantal woorden"
 long["sc"] = "Aantal zinnen"
+#
+long["compl"] = "Aantal 'Complement' annotaties"
+
+# ----
+# Process
+# ----
 
 for filename in filenames:
+    filebase, fileext = os.path.splitext(filename)
+    if not fileext == ".txt":
+        continue
+    # We read the .txt file first, which should be the plain filename we supplied.
     print( "FILE:", filename, file=sys.stderr )
     with open(filename, 'r') as f:
         stats["fc"] += 1
@@ -66,6 +85,25 @@ for filename in filenames:
             words = [ normalize('NFC', w) for w in words ]
             stats["wc"] += len(words)
             stats["sc"] += 1
-
+    # ----
+    # We read the .ann file next
+    # ----
+    filename = filebase + ".ann"
+    if not os.path.isfile( filename ):
+        print( "ERROR: annotation file not found.", file=sys.stderr )
+        sys.exit(1)
+    print( "FILE:", filename, file=sys.stderr )
+    with open(filename, 'r') as f:
+        for l in f:
+            l = l.strip()
+            words = l.split()
+            if not words:
+                continue
+            words = [ normalize('NFC', w) for w in words ] # Does it hurt to normalise plain text?
+            # ['T29', 'Compl-head', '889', '897', 'σπεύδετε']
+            if words[1] == "Complement":
+                #print( words )
+                stats["compl"] += 1
+    
 for stat, count in sorted(stats.items()):
     print( "{0:<40} {1:5n}".format(long[stat], count) )

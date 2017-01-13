@@ -43,7 +43,7 @@ class Complement:
         self.id   = id
         self.type = "?"
         self.words = []
-        self.head = "?" 
+        self.head = None 
         self.span = [] # pairs of [start, end]
     def __repr__(self):
         return "|"+self.id+"|"
@@ -122,6 +122,7 @@ for filename in filenames:
         sys.exit(1)
     print( "FILE:", filename, file=sys.stderr )
     complements = {} # Complements by id
+    compl_heads = {} # Temp storage for before Complement is known
     with open(filename, 'r') as f:
         for l in f:
             l = l.strip()
@@ -162,7 +163,11 @@ for filename in filenames:
                 # print( bits )
                 compl_id   = ann_info[1] #points to the Complement id
                 compl_type = ann_info[2]
-                complements[compl_id].type = compl_type
+                try:
+                    complements[compl_id].type = compl_type
+                except KeyError:
+                    print("CHUNK")
+                    pass # chunks are not saved yet
             # head info
             # T20	Compl-head 197 204	ἐσῆλθον
             # R5	compl-head Arg1:T20 Arg2:T18
@@ -180,14 +185,35 @@ for filename in filenames:
                     for c_span in c.span:
                         if c_span[0] <= span0 <= c_span[1] and c_span[0] <= span1 <= c_span[1]:
                             complements[c_id].head = words[0] # assume head is one word
-    # Complements for this file, and add to the global statistics
+                            continue #continue with next line
+                # If not found, we have compl-head before complement is known sometimes:
+                # T6	Compl-head 287 292	εἶναι
+                # T7	Complement 280 292	καιρὸς εἶναι
+                # Keep them in a list, and check if we get a new complement, or assemble everything
+                # at the end.
+                compl_heads[ann_id] = [ span0, span1, words[0] ] # [ 287 292 εἶναι ]
+                print( "HANGING HEAD" )
+            
+    # Complements for this file, and add to the global statistics, check if we have a
+    # hanging head.
     for c in complements:
-        print( complements[c] )
-        stats["compl_wc"] += len(complements[c].words)
-        if complements[c].type == "indirect":
-            stats["compl_wc_i"] += len(complements[c].words)
-        elif complements[c].type == "direct":
-            stats["compl_wc_d"] += len(complements[c].words)
+        the_complement = complements[c]
+        if not the_complement.head:
+            for ch in compl_heads:
+                #print(ch, compl_heads[ch])
+                span0 = compl_heads[ch][0]
+                span1 = compl_heads[ch][1]
+                word  = compl_heads[ch][2]
+                for c_span in the_complement.span:
+                    if c_span[0] <= span0 <= c_span[1] and c_span[0] <= span1 <= c_span[1]:
+                        the_complement.head = word # assign it
+                        break
+        stats["compl_wc"] += len(the_complement.words)
+        if the_complement.type == "indirect":
+            stats["compl_wc_i"] += len(the_complement.words)
+        elif the_complement.type == "direct":
+            stats["compl_wc_d"] += len(the_complement.words)
+        print( the_complement )
 
 for stat, count in sorted(stats.items()):
     if stat.startswith("compl_wc"):

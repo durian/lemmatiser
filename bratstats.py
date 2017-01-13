@@ -7,6 +7,11 @@ import getopt, sys, os
 from unicodedata import normalize
 from collections import Counter
 
+debug = False
+def DBG(*strs):
+    if debug:
+        sys.stderr.write("DBG:"+"".join(str(strs))+"\n")
+
 '''
 Counts statistics on brat .txt and .ann files
 
@@ -17,6 +22,10 @@ number of sentences
 number of complements
 
 number of complements that contain a root
+(like this inthuc.hist_gk.brat.book7.chap048.ann:
+T32	Complement 843 846;851 873;874 972;973 1178	οὐκ ἀπάξειν τὴν στρατιάν . ROOT εὖ γὰρ εἰδέναι ὅτι Ἀθηναῖοι σφῶν ταῦτα οὐκ ἀποδέξονται , ὥστε μὴ αὐτῶν ψηφισαμένων ἀπελθεῖν . ROOT καὶ γὰρ οὐ τοὺς αὐτοὺς ψηφιεῖσθαί τε περὶ σφῶν καὶ τὰ πράγματα ὥσπερ καὶ αὐτοὶ ὁρῶντας καὶ οὐκ ἄλλων ἐπιτιμήσει ἀκούσαντας γνώσεσθαι , ἀλλ' ἐξ ὧν ἄν τις εὖ λέγων διαβάλλοι , ἐκ τούτων αὐτοὺς πείσεσθαι
+)
+
 average number of word of complements, in general and for direct vs indirect complements
 
 number of direct complements
@@ -24,7 +33,12 @@ number of indirect complements
 number of NP complements
 
 number of mixed complements
+
 do attitude verbs occur with direct complements?
+(T5    AttitudeEnt 263 268    ἔδοξε
+ E1    AttitudeEnt:T5 report:T7
+)
+
 do δὴ and δή occur in complements? (mogen samen genomen worden)
 do γὰρ and γάρ occur in a complement after root (mogen samengenomen worden, hoeft niet per se meteen achter root, maar ergens daarna)
 
@@ -43,8 +57,11 @@ class Complement:
         self.id   = id
         self.type = "?"
         self.words = []
-        self.head = None 
+        self.head = None
+        self.roots = 0
         self.span = [] # pairs of [start, end]
+        # Contains δὴ and δή etc
+        self.contains = Counter()
     def __repr__(self):
         return "|"+self.id+"|"
     def __str__(self):
@@ -76,6 +93,8 @@ stats["compl_np"] = 0
 stats["compl_wc"] = 0 # complements, word count
 stats["compl_wc_i"] = 0 # indirect complements, word count
 stats["compl_wc_d"] = 0 # indirect complements, word count
+stats["compl_wc_np"] = 0 # NP complements, word count
+stats["compl_rc"] = 0 # complements spanning a ROOT element
 
 long = {}
 long["fc"] = "Aantal bestanden"
@@ -89,11 +108,17 @@ long["compl_np"] = "Aantal NP 'Complement' annotaties"
 long["compl_wc"] = "Aantal woorden in Complementen"
 long["compl_wc_i"] = "Aantal woorden in indirecte Complementen"
 long["compl_wc_d"] = "Aantal woorden in directe Complementen"
+long["compl_wc_np"] = "Aantal woorden in NP Complementen"
+long["compl_rc"] = "Aantal Complements met ROOT"
 
 # ----
 # Process
 # ----
 
+if not filenames:
+    print( "Nothing to do..." )
+    sys.exit(0)
+    
 for filename in filenames:
     filebase, fileext = os.path.splitext(filename)
     if not fileext == ".txt":
@@ -157,6 +182,13 @@ for filename in filenames:
                 stats["compl"] += 1
                 complements[ann_id].words = words # this includes "," etc
                 stats["compl_wc"] += len(words)
+                complements[ann_id].roots = words.count("ROOT") 
+                complements[ann_id].contains["δὴ"] += words.count("δὴ")
+                complements[ann_id].contains["δή"] += words.count("δή")
+                # γὰρ and γάρ occur in a complement after root
+                if complements[ann_id].roots > 0:
+                    pass #what is two roots?
+                
             # We build up the Complements first, count when file is done
             if ann_type == "compl-type":
                 # compl-type T6 indirect
@@ -164,9 +196,9 @@ for filename in filenames:
                 compl_id   = ann_info[1] #points to the Complement id
                 compl_type = ann_info[2]
                 try:
-                    complements[compl_id].type = compl_type
+                    complements[compl_id].type = compl_type                    
                 except KeyError:
-                    print("CHUNK")
+                    DBG("CHUNK")
                     pass # chunks are not saved yet
             # head info
             # T20	Compl-head 197 204	ἐσῆλθον
@@ -192,7 +224,7 @@ for filename in filenames:
                 # Keep them in a list, and check if we get a new complement, or assemble everything
                 # at the end.
                 compl_heads[ann_id] = [ span0, span1, words[0] ] # [ 287 292 εἶναι ]
-                print( "HANGING HEAD" )
+                DBG( "HANGING HEAD" )
             
     # Complements for this file, and add to the global statistics, check if we have a
     # hanging head.
@@ -207,12 +239,18 @@ for filename in filenames:
                 for c_span in the_complement.span:
                     if c_span[0] <= span0 <= c_span[1] and c_span[0] <= span1 <= c_span[1]:
                         the_complement.head = word # assign it
-                        break
         stats["compl_wc"] += len(the_complement.words)
         if the_complement.type == "indirect":
+            stats["compl_i"] += 1
             stats["compl_wc_i"] += len(the_complement.words)
         elif the_complement.type == "direct":
+            stats["compl_d"] += 1
             stats["compl_wc_d"] += len(the_complement.words)
+        elif the_complement.type == "NP":
+            stats["compl_np"] += 1
+            stats["compl_wc_np"] += len(the_complement.words)
+        if the_complement.roots > 0:
+            stats["compl_rc"] += 1
         print( the_complement )
 
 for stat, count in sorted(stats.items()):

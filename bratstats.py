@@ -15,6 +15,7 @@ Dit is een lijstje met aantallen die ik graag zou willen weten:
 number of words
 number of sentences
 number of complements
+
 number of complements that contain a root
 average number of word of complements, in general and for direct vs indirect complements
 number of direct complements
@@ -93,17 +94,24 @@ for filename in filenames:
         print( "ERROR: annotation file not found.", file=sys.stderr )
         sys.exit(1)
     print( "FILE:", filename, file=sys.stderr )
+    complement = {}
     with open(filename, 'r') as f:
         for l in f:
             l = l.strip()
-            words = l.split()
-            if not words:
+            bits = l.split("\t")
+            if len(bits) != 3:
                 continue
-            words = [ normalize('NFC', w) for w in words ] # Does it hurt to normalise plain text?
-            # ['T29', 'Compl-head', '889', '897', 'σπεύδετε']
-            if words[1] == "Complement":
-                #print( words )
+            # T4      Complement 46 156       αὖθις μείζονι...
+            ann_id   = bits[0]
+            ann_info = bits[1].split()
+            ann_type = ann_info[0]
+            words = [ normalize('NFC', w) for w in bits[2].split() ]
+            if ann_type == "Complement":
+                # Write out/count the current complement
+                if complement:
+                    print( repr(complement) )
                 stats["compl"] += 1
+                #complement[
     
 for stat, count in sorted(stats.items()):
     print( "{0:<40} {1:5n}".format(long[stat], count) )

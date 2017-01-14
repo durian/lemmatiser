@@ -75,6 +75,8 @@ class Complement:
     # T13	Complement 96 153	ἐν μέρει τινὶ τῆς χώρας Κύκλωπες καὶ Λαιστρυγόνες οἰκῆσαι
     def __init__(self, id):
         self.id   = id
+        self.chunked = False
+        self.attverb = None
         self.type = "?"
         self.words = []
         self.head = None
@@ -85,10 +87,13 @@ class Complement:
     def __repr__(self):
         return "|"+self.id+"|"
     def __str__(self):
+        attv = ""
+        if self.attverb:
+            attv = "AV"
         contains_str = ""
         for c in self.contains:
             contains_str = contains_str + str(c)+":"+str(self.contains[c])+" "
-        return "Complement:"+self.id+" head:"+repr(self.head)+" type:"+self.type+" words:"+str(len(self.words))+" "+contains_str #+" span:"+repr(self.span)
+        return "Complement:"+self.id+" head:"+repr(self.head)+" type:"+self.type+" words:"+str(len(self.words))+" "+contains_str+attv #+" span:"+repr(self.span)
     
 filenames = [] # Should be the *.txt files, and we figure out the .ann names from these
 filename  = None
@@ -118,6 +123,7 @@ stats["compl_wc_i"] = 0 # indirect complements, word count
 stats["compl_wc_d"] = 0 # indirect complements, word count
 stats["compl_wc_np"] = 0 # NP complements, word count
 stats["compl_rc"] = 0 # complements spanning a ROOT element
+stats["compl_av"] = 0 # number of complements with attitude verb
 
 long = {}
 long["fc"] = "Aantal bestanden"
@@ -133,6 +139,7 @@ long["compl_wc_i"] = "Aantal woorden in indirecte Complementen"
 long["compl_wc_d"] = "Aantal woorden in directe Complementen"
 long["compl_wc_np"] = "Aantal woorden in NP Complementen"
 long["compl_rc"] = "Aantal Complements met ROOT"
+long["compl_av"] = "Aantal Complements met attitude verb"
 
 # ----
 # Process
@@ -167,6 +174,7 @@ for filename in filenames:
     print( "{0:<50} {1:>5n} ".format("Aantal woorden", wc) )
     stats["wc"] += wc
     stats["sc"] += sc
+    
     # ----
     # We read the .ann file next
     # ----
@@ -177,6 +185,7 @@ for filename in filenames:
     print( "---- FILE:", filename, file=sys.stderr )
     complements = {} # Complements by id
     compl_heads = {} # Temp storage for before Complement is known
+    attitudes   = {} # Temp storage for before Complement is known
     with open(filename, 'r') as f:
         for l in f:
             l = l.strip()
@@ -191,9 +200,49 @@ for filename in filenames:
                 words = [ normalize('NFC', w) for w in bits[2].split() ]
             else:
                 words = []
+            # Als een complement uit 1 chunk bestaat hebben we alleen het complement geannoteerd,
+            # niet de chunk, omdat we dan, was het idee, later die chunks in die gevallen
+            # automatisch zouden toevoegen (span dus zelfde als complement)
             if ann_type == "Complement": #compl-head compl-chunk ? how does chunk relate to Compl?
                 # Write out/count the current complement
                 # Or save all of them, because the order is random in the .ann files?
+                complements[ann_id] = Complement(ann_id)
+                # spans could look like this:
+                '''
+                T13 Complement 96 153
+                T17 Complement 156 158;163 173
+                '''
+                spans = " ".join(ann_info[1:]) # The string after "Complement"
+                for span in spans.split(";"): # spans are seperated by a ";"
+                    xy = span.split() # and consist of a start and end position
+                    if len(xy) == 2:
+                        complements[ann_id].span.append( [int(xy[0]),int(xy[1])] )
+                    else:
+                        print( "ERROR in spans" )
+                        sys.exit(2)
+                stats["compl"] += 1
+                complements[ann_id].words = words # this includes "," etc
+                complements[ann_id].roots = words.count("ROOT")
+                stats["compl_wc"] += (len(words) - complements[ann_id].roots)
+                # Count these
+                complements[ann_id].contains["δὴ"] += words.count("δὴ")
+                complements[ann_id].contains["δή"] += words.count("δή")
+                # γὰρ and γάρ occur in a complement after root
+                if complements[ann_id].roots > 0:
+                    root_idx = [i for i,x in enumerate(words) if x == "ROOT"]
+                    DBG( root_idx )
+                    # this could give [3] or [3,5,8] or something
+                    # we take the text after the first ROOT
+                    root_pos = root_idx[0]
+                    after = words[root_pos:]
+                    DBG( root_pos, after )
+                    # And count these
+                    complements[ann_id].contains["γὰρ"] += words.count("γὰρ")
+                    complements[ann_id].contains["γάρ"] += words.count("γάρ")
+                    
+            if True and ann_id[0] == "T" and ann_type == "Compl-chunk":
+                print( l )
+                # should look it up if it already exists somehow?
                 complements[ann_id] = Complement(ann_id)
                 # spans could look like this:
                 '''
@@ -227,6 +276,21 @@ for filename in filenames:
                     # And count these
                     complements[ann_id].contains["γὰρ"] += words.count("γὰρ")
                     complements[ann_id].contains["γάρ"] += words.count("γάρ")
+
+            # for example:
+            # R2	compl-chunk Arg1:T17 Arg2:T14
+            # The Arg2 points to a Complement (does it always?)
+            if ann_id[0] == "R" and ann_type == "compl-chunk":
+                print( l )
+                print( ann_info ) # ['compl-chunk', 'Arg1:T7', 'Arg2:T9']
+                arg2 = ann_info[2].split(":")
+                arg2_c = arg2[1]
+                # What if complements[argc_2] doesn't exist? Is that possible?
+                if arg2_c in complements:
+                    print( arg2_c, complements[arg2_c] )
+                else:
+                    print( arg2_c )
+                    sys.exit(3) # never happens in book6 and book7
                 
             # We build up the Complements first, count when file is done
             if ann_type == "compl-type":
@@ -239,6 +303,7 @@ for filename in filenames:
                 except KeyError:
                     DBG("CHUNK")
                     pass # chunks are not saved yet
+                    
             # head info
             # T20	Compl-head 197 204	ἐσῆλθον
             # R5	compl-head Arg1:T20 Arg2:T18
@@ -264,9 +329,30 @@ for filename in filenames:
                 # at the end.
                 compl_heads[ann_id] = [ span0, span1, words[0] ] # [ 287 292 εἶναι ]
                 DBG( "HANGING HEAD" )
-            
+
+            #  E1    AttitudeEnt:T5 report:T7
+            # These are saved and processed later
+            if ann_id[0] == "E" and ann_type[0:11] == "AttitudeEnt":
+                attitudes[ann_id] = ann_info # ['AttitudeEnt:T20', 'report:T21']
+                #print( attitudes[ann_id] )
+                
     # Complements for this file, and add to the global statistics, check if we have a
     # hanging head.
+    # See if we can add the AttitudeEnts to the complements.
+    for att in attitudes:
+        attitude = attitudes[att]
+        if len(attitude) > 1:
+            att_id1 = attitude[0].split(":")[1]
+            att_id2 = attitude[1].split(":")[1]
+            try:
+                complements[att_id2].attverb = att_id1
+            except KeyError:
+                print( "ERROR: AttitudeEnt points to non-existing complement." )
+                sys.exit(4)
+        else:
+            print( "ERROR: AttitudeEnt as no ID." )
+            #sys.exit(5)
+    # Loop over the complements, add the hanging heads.
     for c in sorted(complements.keys()):
         the_complement = complements[c]
         if not the_complement.head:
@@ -278,6 +364,7 @@ for filename in filenames:
                 for c_span in the_complement.span:
                     if c_span[0] <= span0 <= c_span[1] and c_span[0] <= span1 <= c_span[1]:
                         the_complement.head = word # assign it
+        # Start counting th statistics.
         stats["compl_wc"] += len(the_complement.words)
         if the_complement.type == "indirect":
             stats["compl_i"] += 1
@@ -290,8 +377,13 @@ for filename in filenames:
             stats["compl_wc_np"] += len(the_complement.words)
         if the_complement.roots > 0:
             stats["compl_rc"] += 1
+        if the_complement.attverb:
+            stats["compl_av"] += 1
+        for contain in the_complement.contains:
+            stats["contains_"+contain] += int(the_complement.contains[contain])
         print( the_complement )
 
+print( "\nSTATISTICS" )
 for stat, count in sorted(stats.items()):
     if stat.startswith("compl_wc"):
         average = float(count) / stats["compl"]

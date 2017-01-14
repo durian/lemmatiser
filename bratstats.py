@@ -15,6 +15,26 @@ def DBG(*strs):
 '''
 Counts statistics on brat .txt and .ann files
 
+USAGE: specify the *txt files (wildcards are expanded):
+  python3 bratstats.py -f "thuc.hist_gk.brat.book6*.txt"
+
+For each .txt file, an .ann file is expexted.
+
+# ----
+
+TODO
+
+*) The compl-chunks
+
+*) When counting γὰρ, the chunks don't have the ROOT element I think, in the text:
+
+thuc.hist_gk.brat.book7.chap048.ann:T32	Complement 843 846;851 873;874 972;973 1178	οὐκ ἀπάξειν τὴν στρατιάν . ROOT εὖ γὰρ εἰδέναι ὅτι Ἀθηναῖοι σφῶν ταῦτα οὐκ ἀποδέξονται , ὥστε μὴ αὐτῶν ψηφισαμένων ἀπελθεῖν . ROOT καὶ γὰρ οὐ τοὺς αὐτοὺς ψηφιεῖσθαί τε περὶ σφῶν καὶ τὰ πράγματα ὥσπερ καὶ αὐτοὶ ὁρῶντας καὶ οὐκ ἄλλων ἐπιτιμήσει ἀκούσαντας γνώσεσθαι , ἀλλ' ἐξ ὧν ἄν τις εὖ λέγων διαβάλλοι , ἐκ τούτων αὐτοὺς πείσεσθαι
+
+thuc.hist_gk.brat.book7.chap048.ann:T35	Compl-chunk 879 970	εὖ γὰρ εἰδέναι ὅτι Ἀθηναῖοι σφῶν ταῦτα οὐκ ἀποδέξονται , ὥστε μὴ αὐτῶν ψηφισαμένων ἀπελθεῖν
+
+
+# ----
+
 Dit is een lijstje met aantallen die ik graag zou willen weten:
 
 number of words
@@ -65,7 +85,10 @@ class Complement:
     def __repr__(self):
         return "|"+self.id+"|"
     def __str__(self):
-        return "Complement:"+self.id+" head:"+repr(self.head)+" type:"+self.type+" words:"+str(len(self.words)) #+" span:"+repr(self.span)
+        contains_str = ""
+        for c in self.contains:
+            contains_str = contains_str + str(c)+":"+str(self.contains[c])+" "
+        return "Complement:"+self.id+" head:"+repr(self.head)+" type:"+self.type+" words:"+str(len(self.words))+" "+contains_str #+" span:"+repr(self.span)
     
 filenames = [] # Should be the *.txt files, and we figure out the .ann names from these
 filename  = None
@@ -124,9 +147,11 @@ for filename in filenames:
     if not fileext == ".txt":
         continue
     # We read the .txt file first, which should be the plain filename we supplied.
-    print( "FILE:", filename, file=sys.stderr )
+    print( "---- FILE:", filename, file=sys.stderr )
     with open(filename, 'r') as f:
         stats["fc"] += 1
+        wc = 0
+        sc = 0
         for l in f:
             l = l.strip()
             words = l.split()
@@ -136,8 +161,12 @@ for filename in filenames:
                 words = words[1:]
             # We normalise all Greek we read nowadays.
             words = [ normalize('NFC', w) for w in words ]
-            stats["wc"] += len(words)
-            stats["sc"] += 1
+            wc += len(words)
+            sc += 1
+    print( "{0:<50} {1:>5n} ".format("Aantal zinnen", sc) )
+    print( "{0:<50} {1:>5n} ".format("Aantal woorden", wc) )
+    stats["wc"] += wc
+    stats["sc"] += sc
     # ----
     # We read the .ann file next
     # ----
@@ -145,7 +174,7 @@ for filename in filenames:
     if not os.path.isfile( filename ):
         print( "ERROR: annotation file not found.", file=sys.stderr )
         sys.exit(1)
-    print( "FILE:", filename, file=sys.stderr )
+    print( "---- FILE:", filename, file=sys.stderr )
     complements = {} # Complements by id
     compl_heads = {} # Temp storage for before Complement is known
     with open(filename, 'r') as f:
@@ -181,13 +210,23 @@ for filename in filenames:
                         sys.exit(2)
                 stats["compl"] += 1
                 complements[ann_id].words = words # this includes "," etc
-                stats["compl_wc"] += len(words)
-                complements[ann_id].roots = words.count("ROOT") 
+                complements[ann_id].roots = words.count("ROOT")
+                stats["compl_wc"] += (len(words) - complements[ann_id].roots)
+                # Count these
                 complements[ann_id].contains["δὴ"] += words.count("δὴ")
                 complements[ann_id].contains["δή"] += words.count("δή")
                 # γὰρ and γάρ occur in a complement after root
                 if complements[ann_id].roots > 0:
-                    pass #what is two roots?
+                    root_idx = [i for i,x in enumerate(words) if x == "ROOT"]
+                    DBG( root_idx )
+                    # this could give [3] or [3,5,8] or something
+                    # we take the text after the first ROOT
+                    root_pos = root_idx[0]
+                    after = words[root_pos:]
+                    DBG( root_pos, after )
+                    # And count these
+                    complements[ann_id].contains["γὰρ"] += words.count("γὰρ")
+                    complements[ann_id].contains["γάρ"] += words.count("γάρ")
                 
             # We build up the Complements first, count when file is done
             if ann_type == "compl-type":
@@ -228,7 +267,7 @@ for filename in filenames:
             
     # Complements for this file, and add to the global statistics, check if we have a
     # hanging head.
-    for c in complements:
+    for c in sorted(complements.keys()):
         the_complement = complements[c]
         if not the_complement.head:
             for ch in compl_heads:

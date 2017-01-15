@@ -226,59 +226,6 @@ for filename in filenames:
                     # And count these
                     complements[ann_id].contains["γὰρ"] += words.count("γὰρ")
                     complements[ann_id].contains["γάρ"] += words.count("γάρ")
-
-            # Not necessary:
-            if False and ann_id[0] == "T" and ann_type == "Compl-chunk":
-                print( l )
-                # should look it up if it already exists somehow?
-                complements[ann_id] = Complement(ann_id)
-                # spans could look like this:
-                '''
-                T13 Complement 96 153
-                T17 Complement 156 158;163 173
-                '''
-                spans = " ".join(ann_info[1:]) # The string after "Complement"
-                for span in spans.split(";"): # spans are seperated by a ";"
-                    xy = span.split() # and consist of a start and end position
-                    if len(xy) == 2:
-                        complements[ann_id].span.append( [int(xy[0]),int(xy[1])] )
-                    else:
-                        print( "ERROR" )
-                        sys.exit(2)
-                stats["compl"] += 1
-                complements[ann_id].words = words # this includes "," etc
-                complements[ann_id].roots = words.count("ROOT")
-                stats["compl_wc"] += (len(words) - complements[ann_id].roots)
-                # Count these
-                complements[ann_id].contains["δὴ"] += words.count("δὴ")
-                complements[ann_id].contains["δή"] += words.count("δή")
-                # γὰρ and γάρ occur in a complement after root
-                if complements[ann_id].roots > 0:
-                    root_idx = [i for i,x in enumerate(words) if x == "ROOT"]
-                    DBG( root_idx )
-                    # this could give [3] or [3,5,8] or something
-                    # we take the text after the first ROOT
-                    root_pos = root_idx[0]
-                    after = words[root_pos:]
-                    DBG( root_pos, after )
-                    # And count these
-                    complements[ann_id].contains["γὰρ"] += words.count("γὰρ")
-                    complements[ann_id].contains["γάρ"] += words.count("γάρ")
-
-            # for example:
-            # R2	compl-chunk Arg1:T17 Arg2:T14
-            # The Arg2 points to a Complement (does it always?)
-            if False ann_id[0] == "R" and ann_type == "compl-chunk":
-                print( l )
-                print( ann_info ) # ['compl-chunk', 'Arg1:T7', 'Arg2:T9']
-                arg2 = ann_info[2].split(":")
-                arg2_c = arg2[1]
-                # What if complements[argc_2] doesn't exist? Is that possible?
-                if arg2_c in complements:
-                    print( arg2_c, complements[arg2_c] )
-                else:
-                    print( arg2_c )
-                    sys.exit(3) # never happens in book6 and book7
                 
             # We build up the Complements first, count when file is done
             if ann_type == "compl-type":

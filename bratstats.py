@@ -22,19 +22,6 @@ For each .txt file, an .ann file is expexted.
 
 # ----
 
-TODO
-
-*) The compl-chunks
-
-*) When counting γὰρ, the chunks don't have the ROOT element I think, in the text:
-
-thuc.hist_gk.brat.book7.chap048.ann:T32	Complement 843 846;851 873;874 972;973 1178	οὐκ ἀπάξειν τὴν στρατιάν . ROOT εὖ γὰρ εἰδέναι ὅτι Ἀθηναῖοι σφῶν ταῦτα οὐκ ἀποδέξονται , ὥστε μὴ αὐτῶν ψηφισαμένων ἀπελθεῖν . ROOT καὶ γὰρ οὐ τοὺς αὐτοὺς ψηφιεῖσθαί τε περὶ σφῶν καὶ τὰ πράγματα ὥσπερ καὶ αὐτοὶ ὁρῶντας καὶ οὐκ ἄλλων ἐπιτιμήσει ἀκούσαντας γνώσεσθαι , ἀλλ' ἐξ ὧν ἄν τις εὖ λέγων διαβάλλοι , ἐκ τούτων αὐτοὺς πείσεσθαι
-
-thuc.hist_gk.brat.book7.chap048.ann:T35	Compl-chunk 879 970	εὖ γὰρ εἰδέναι ὅτι Ἀθηναῖοι σφῶν ταῦτα οὐκ ἀποδέξονται , ὥστε μὴ αὐτῶν ψηφισαμένων ἀπελθεῖν
-
-
-# ----
-
 Dit is een lijstje met aantallen die ik graag zou willen weten:
 
 number of words
@@ -239,8 +226,9 @@ for filename in filenames:
                     # And count these
                     complements[ann_id].contains["γὰρ"] += words.count("γὰρ")
                     complements[ann_id].contains["γάρ"] += words.count("γάρ")
-                    
-            if True and ann_id[0] == "T" and ann_type == "Compl-chunk":
+
+            # Not necessary:
+            if False and ann_id[0] == "T" and ann_type == "Compl-chunk":
                 print( l )
                 # should look it up if it already exists somehow?
                 complements[ann_id] = Complement(ann_id)
@@ -280,7 +268,7 @@ for filename in filenames:
             # for example:
             # R2	compl-chunk Arg1:T17 Arg2:T14
             # The Arg2 points to a Complement (does it always?)
-            if ann_id[0] == "R" and ann_type == "compl-chunk":
+            if False ann_id[0] == "R" and ann_type == "compl-chunk":
                 print( l )
                 print( ann_info ) # ['compl-chunk', 'Arg1:T7', 'Arg2:T9']
                 arg2 = ann_info[2].split(":")

@@ -63,7 +63,6 @@ class Complement:
     def __init__(self, id):
         self.id   = id
         self.chunked = False
-        self.attverb = None
         self.type = "?"
         self.words = []
         self.head = None
@@ -76,16 +75,13 @@ class Complement:
     def __repr__(self):
         return "|"+self.id+"|"
     def __str__(self):
-        attv = ""
-        if self.attverb:
-            attv = "AV" # self.attverb contains an id like T8
         subc = ""
         if self.subchunk:
             subc = "SC"
         contains_str = ""
         for c in self.contains:
             contains_str = contains_str + str(c)+":"+str(self.contains[c])+" "
-        return "Complement:"+self.id+" head:"+repr(self.head)+" type:"+self.type+" words:"+str(len(self.words))+" "+contains_str+attv+" "+subc #+" span:"+repr(self.span)
+        return "Complement:"+self.id+" head:"+repr(self.head)+" type:"+self.type+" words:"+str(len(self.words))+" "+contains_str+" "+subc+" "+"/".join(self.entities) #+" span:"+repr(self.span)
 
 
 #Given two ranges [x1,x2], [y1,y2]
@@ -129,6 +125,9 @@ stats["compl_owc"] = 0 # complements, overlap word count
 
 stats["compl_rc"] = 0 # complements spanning a ROOT element
 stats["compl_av"] = 0 # number of complements with attitude verb
+stats["compl_ae"] = 0 # number of complements with a attitude entity
+stats["compl_se"] = 0 # number of complements with a speech entity
+stats["compl_pe"] = 0 # number of complements with a perception entity
 
 long = {}
 long["fc"] = "Aantal bestanden"
@@ -149,7 +148,9 @@ long["compl_owc"] = "Aantal woorden in Complementen (met overlap)"
 
 long["compl_rc"] = "Aantal Complements met ROOT"
 long["compl_av"] = "Aantal Complements met attitude verb"
-
+long["compl_ae"] = "Aantal Complements met attitude entity"
+long["compl_se"] = "Aantal Complements met speech entity"
+long["compl_pe"] = "Aantal Complements met perception entity"
 # ----
 # Process
 # ----
@@ -336,7 +337,7 @@ for filename in filenames:
                 att_id2 = r.split(":")[1]
                 DBG("CHECKING ATTITUDE", att_id1, att_id2)
                 try:
-                    complements[att_id2].attverb = att_id1
+                    complements[att_id2].entities.append("A") # or with ent_id1
                     DBG("ADDING ATTITUDE TO COMPLEMENT", att_id2 )
                 except KeyError:
                     print( "ERROR: AttitudeEnt points to non-existing complement." )
@@ -356,7 +357,7 @@ for filename in filenames:
                 ent_id2 = r.split(":")[1]
                 DBG("CHECKING PERCEPTION", ent_id1, ent_id2)
                 try:
-                    complements[ent_id2].attverb = ent_id1
+                    complements[ent_id2].entities.append("P") # or with ent_id1
                     DBG("ADDING PERCEPTION TO COMPLEMENT", ent_id2 )
                 except KeyError:
                     print( "ERROR: Entity points to non-existing complement." )
@@ -376,7 +377,7 @@ for filename in filenames:
                 ent_id2 = r.split(":")[1]
                 DBG("CHECKING SPEECHENT", ent_id1, ent_id2)
                 try:
-                    complements[ent_id2].attverb = ent_id1
+                    complements[ent_id2].entities.append("S") # or with ent_id1
                     DBG("ADDING SPEECHENT TO COMPLEMENT", ent_id2 )
                 except KeyError:
                     print( "ERROR: Entity points to non-existing complement." )
@@ -450,11 +451,16 @@ for filename in filenames:
             stats["compl_wc_pnp"] += len(compl_words)
         if the_complement.roots > 0:
             stats["compl_rc"] += 1
-        if the_complement.attverb:
-            stats["compl_av"] += 1
+        #if the_complement.attverb:
+        #    stats["compl_av"] += 1
+        if "A" in the_complement.entities:
+            stats["compl_ae"] += 1
+        if "S" in the_complement.entities:
+            stats["compl_se"] += 1
+        if "P" in the_complement.entities:
+            stats["compl_pe"] += 1
         for contain in the_complement.contains:
-            stats["contains_"+contain] += int(the_complement.contains[contain])
-            
+            stats["contains_"+contain] += int(the_complement.contains[contain])            
         DBG( str(the_complement) )
 
 print( "\nSTATISTICS" )

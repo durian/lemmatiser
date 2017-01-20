@@ -68,7 +68,8 @@ class Complement:
         self.words = []
         self.head = None
         self.roots = 0
-        self.span = [] # pairs of [start, end]
+        self.spans = [] # pairs of [start, end]
+        self.subchunk = False # if this is part of a larger chunk
         # Contains δὴ and δή etc
         self.contains = Counter()
     def __repr__(self):
@@ -77,11 +78,21 @@ class Complement:
         attv = ""
         if self.attverb:
             attv = "AV" # self.attverb contains an id like T8
+        subc = ""
+        if self.subchunk:
+            subc = "SC"
         contains_str = ""
         for c in self.contains:
             contains_str = contains_str + str(c)+":"+str(self.contains[c])+" "
-        return "Complement:"+self.id+" head:"+repr(self.head)+" type:"+self.type+" words:"+str(len(self.words))+" "+contains_str+attv #+" span:"+repr(self.span)
-    
+        return "Complement:"+self.id+" head:"+repr(self.head)+" type:"+self.type+" words:"+str(len(self.words))+" "+contains_str+attv+" "+subc #+" span:"+repr(self.span)
+
+
+#Given two ranges [x1,x2], [y1,y2]
+def overlap(x1,x2,y1,y2):
+    return max(x1,y1) <= min(x2,y2)
+
+# ----
+
 filenames = [] # Should be the *.txt files, and we figure out the .ann names from these
 filename  = None
 
@@ -113,6 +124,8 @@ stats["compl_wc_i"] = 0 # indirect complements, word count
 stats["compl_wc_d"] = 0 # indirect complements, word count
 stats["compl_wc_np"] = 0 # NP complements, word count
 stats["compl_wc_pnp"] = 0 # preposedNP complements, word count
+stats["compl_owc"] = 0 # complements, overlap word count
+
 stats["compl_rc"] = 0 # complements spanning a ROOT element
 stats["compl_av"] = 0 # number of complements with attitude verb
 
@@ -131,6 +144,8 @@ long["compl_wc_i"] = "Aantal woorden in indirecte Complementen"
 long["compl_wc_d"] = "Aantal woorden in directe Complementen"
 long["compl_wc_np"] = "Aantal woorden in NP Complementen"
 long["compl_wc_pnp"] = "Aantal woorden in preposedNP Complementen"
+long["compl_owc"] = "Aantal woorden in Complementen (met overlap)"
+
 long["compl_rc"] = "Aantal Complements met ROOT"
 long["compl_av"] = "Aantal Complements met attitude verb"
 
@@ -215,16 +230,18 @@ for filename in filenames:
                 for span in spans.split(";"): # spans are seperated by a ";"
                     xy = span.split() # and consist of a start and end position
                     if len(xy) == 2:
-                        complements[ann_id].span.append( [int(xy[0]),int(xy[1])] )
+                        complements[ann_id].spans.append( [int(xy[0]),int(xy[1])] )
                         DBG("SPAN", [int(xy[0]),int(xy[1])])
                     else:
                         print( "ERROR in spans" )
                         sys.exit(2)
                 stats["compl"] += 1
                 complements[ann_id].words = words # this includes "," etc
+                '''
                 complements[ann_id].roots = words.count("ROOT")
                 # words is the whole sentence BUG
                 stats["compl_wc"] += (len(words) - complements[ann_id].roots)
+                '''
                 # Count these
                 complements[ann_id].contains["δὴ"] += words.count("δὴ")
                 complements[ann_id].contains["δή"] += words.count("δή")
@@ -270,7 +287,7 @@ for filename in filenames:
                 # Find the Complement (try them all as we don't know the order in the .ann file)
                 for c_id in complements:
                     c = complements[c_id]
-                    for c_span in c.span:
+                    for c_span in c.spans:
                         if c_span[0] <= span0 <= c_span[1] and c_span[0] <= span1 <= c_span[1]:
                             complements[c_id].head = words[0] # assume head is one word
                             continue #continue with next line
@@ -280,7 +297,7 @@ for filename in filenames:
                 # Keep them in a list, and check if we get a new complement, or assemble everything
                 # at the end.
                 compl_heads[ann_id] = [ span0, span1, words[0] ] # [ 287 292 εἶναι ]
-                DBG( "HANGING HEAD" )
+                DBG( "HANGING HEAD", ann_id )
 
             #  E1    AttitudeEnt:T5 report:T7
             # These are saved and processed later
@@ -310,12 +327,41 @@ for filename in filenames:
         else:
             print( "ERROR: AttitudeEnt has no ID." )
             #sys.exit(5)
-    # Loop over the complements, add the hanging heads and types
+    # Loop over the complements, add the hanging heads and types, count overlap
+    # overlap
+    overlaps = [] # Keep track of what we have done
+    for c in sorted(complements.keys()):
+        the_complement = complements[c]
+        curr_spans = the_complement.spans
+        curr_id = c
+        for c_span in curr_spans:
+            # check in all other except myself
+            for c1 in sorted(complements.keys()):
+                the_complement1 = complements[c1]
+                if c1 == curr_id:
+                    continue
+                this_set = set({curr_id, c1})
+                if this_set in overlaps:
+                    continue
+                overlaps.append(this_set)
+                curr_spans1 = the_complement1.spans
+                for c_span1 in curr_spans1:
+                    if overlap(*c_span, *c_span1):
+                        DBG("OVERLAP", curr_id, c1)
+                        if len(the_complement.words) < len(the_complement1.words):
+                            the_complement.subchunk = True
+                        else:
+                            the_complement1.subchunk = True
+                        #delta = min(len(the_complement.words), len(the_complement1.words))
+                        #print( "!", curr_id, c1, c_span, c_span1 )
+                        #print( len(the_complement.words), len(the_complement1.words), delta )
+    #types
     for ct in compl_types.keys():
         if ct in complements:
             if not complements[ct].type:
                 complements[ct].type = compl_types[ct][0]
                 DBG("ADDING SAVED TYPE", ct)
+    # compl_heads + word counts
     for c in sorted(complements.keys()):
         the_complement = complements[c]
         if not the_complement.head:
@@ -324,34 +370,39 @@ for filename in filenames:
                 span0 = compl_heads[ch][0]
                 span1 = compl_heads[ch][1]
                 word  = compl_heads[ch][2]
-                for c_span in the_complement.span:
+                for c_span in the_complement.spans:
                     if c_span[0] <= span0 <= c_span[1] and c_span[0] <= span1 <= c_span[1]:
                         the_complement.head = word # assign it
-        # Start counting th statistics.
+        # Start counting the statistics.
+        compl_words = [w for w in the_complement.words if w != 'ROOT']
+        stats["compl_owc"] += len(compl_words) #with overlap
+        if not the_complement.subchunk:
+            stats["compl_wc"] += len(compl_words) #no overlap
         if the_complement.type == "indirect":
             stats["compl_i"] += 1
-            stats["compl_wc_i"] += len(the_complement.words)
+            stats["compl_wc_i"] += len(compl_words)
         elif the_complement.type == "direct":
             stats["compl_d"] += 1
-            stats["compl_wc_d"] += len(the_complement.words)
+            stats["compl_wc_d"] += len(compl_words)
         elif the_complement.type == "NP":
             stats["compl_np"] += 1
-            stats["compl_wc_np"] += len(the_complement.words)
+            stats["compl_wc_np"] += len(compl_words)
         elif the_complement.type == "preposedNP":
             stats["compl_pnp"] += 1
-            stats["compl_wc_pnp"] += len(the_complement.words)
+            stats["compl_wc_pnp"] += len(compl_words)
         if the_complement.roots > 0:
             stats["compl_rc"] += 1
         if the_complement.attverb:
             stats["compl_av"] += 1
         for contain in the_complement.contains:
             stats["contains_"+contain] += int(the_complement.contains[contain])
+            
         DBG( str(the_complement) )
 
 print( "\nSTATISTICS" )
 print("python", " ".join(sys.argv))
 for stat, count in sorted(stats.items()):
-    if stat.startswith("compl_wc"):
+    if stat.startswith("compl_wc") or stat.startswith("compl_owc"):
         average = float(count) / stats["compl"]
         try:
             print( "{0:<50} {1:>5n} {2:>6.2f}".format(long[stat], count, average) )

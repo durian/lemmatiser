@@ -69,6 +69,7 @@ class Complement:
         self.head = None
         self.roots = 0
         self.spans = [] # pairs of [start, end]
+        self.entities = [] # the speech/perception/attitude entities
         self.subchunk = False # if this is part of a larger chunk
         # Contains δὴ and δή etc
         self.contains = Counter()
@@ -196,6 +197,8 @@ for filename in filenames:
     compl_heads = {} # Temp storage for before Complement is known
     compl_types = {} # Temp storage for before Complement is known
     attitudes   = {} # Temp storage for before Complement is known
+    perceptions = {} # Temp storage for before Complement is known
+    speechents  = {} # Temp storage for before Complement is known
     with open(filename, 'r') as f:
         for l in f:
             l = l.strip()
@@ -304,10 +307,24 @@ for filename in filenames:
             if ann_id[0] == "E" and ann_type[0:11] == "AttitudeEnt":
                 attitudes[ann_id] = ann_info # ['AttitudeEnt:T20', 'report:T21']
                 DBG("ATTITUDE ENTITY", ann_id, ann_info )
-                #print( attitudes[ann_id] )
-                
+
+            #  T7      PerceptionEnt 612 619   ὁρῶντες
+            #  E2      PerceptionEnt:T7 report:T8
+            # These are saved and processed later
+            if ann_id[0] == "E" and ann_type[0:13] == "PerceptionEnt":
+                perceptions[ann_id] = ann_info # ['PerceptionEnt:T20', 'report:T21']
+                DBG("PERCEPTION ENTITY", ann_id, ann_info )
+
+            # T15     SpeechEnt 461 464       ἔφη
+            # E3      SpeechEnt:T15 report:T16    
+            # These are saved and processed later
+            if ann_id[0] == "E" and ann_type[0:9] == "SpeechEnt":
+                speechents[ann_id] = ann_info # ['SpeechEnt:T20', 'report:T21']
+                DBG("SPEECH ENTITY", ann_id, ann_info )
+
     # Complements for this file, and add to the global statistics, check if we have a
     # hanging head.
+
     # See if we can add the AttitudeEnts to the complements.
     for att in attitudes:
         attitude = attitudes[att]
@@ -327,6 +344,47 @@ for filename in filenames:
         else:
             print( "ERROR: AttitudeEnt has no ID." )
             #sys.exit(5)
+
+    # See if we can add the perception to the complements.
+    for ent in perceptions:
+        entity = perceptions[ent]
+        # Can alse be:
+        # E2	AttitudeEnt:T11 report:T8 report2:T9 report3:T10
+        if len(entity) > 1:
+            ent_id1 = entity[0].split(":")[1] # T11
+            for r in entity[1:]:
+                ent_id2 = r.split(":")[1]
+                DBG("CHECKING PERCEPTION", ent_id1, ent_id2)
+                try:
+                    complements[ent_id2].attverb = ent_id1
+                    DBG("ADDING PERCEPTION TO COMPLEMENT", ent_id2 )
+                except KeyError:
+                    print( "ERROR: Entity points to non-existing complement." )
+                    #sys.exit(4)
+        else:
+            print( "ERROR: Entity has no ID." )
+            #sys.exit(5)
+
+    # See if we can add the speech entities to the complements.
+    for ent in speechents:
+        entity = speechents[ent]
+        # Can alse be:
+        # E2	AttitudeEnt:T11 report:T8 report2:T9 report3:T10
+        if len(entity) > 1:
+            ent_id1 = entity[0].split(":")[1] # T11
+            for r in entity[1:]:
+                ent_id2 = r.split(":")[1]
+                DBG("CHECKING SPEECHENT", ent_id1, ent_id2)
+                try:
+                    complements[ent_id2].attverb = ent_id1
+                    DBG("ADDING SPEECHENT TO COMPLEMENT", ent_id2 )
+                except KeyError:
+                    print( "ERROR: Entity points to non-existing complement." )
+                    #sys.exit(4)
+        else:
+            print( "ERROR: Entity has no ID." )
+            #sys.exit(5)
+
     # Loop over the complements, add the hanging heads and types, count overlap
     # overlap
     overlaps = [] # Keep track of what we have done

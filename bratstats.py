@@ -18,7 +18,7 @@ Counts statistics on brat .txt and .ann files
 USAGE: specify the *txt files (wildcards are expanded):
   python3 bratstats.py -f "thuc.hist_gk.brat.book6*.txt"
 
-For each .txt file, an .ann file is expexted.
+For each .txt file, an .ann file is expected.
 
 # ----
 
@@ -246,7 +246,7 @@ for filename in filenames:
                 complements[ann_id].contains["δὴ"] += words.count("δὴ")
                 complements[ann_id].contains["δή"] += words.count("δή")
                 # γὰρ and γάρ occur in a complement after root
-                if complements[ann_id].roots > 0:
+                if words.count("ROOT") > 0:
                     DBG("ROOTS > 0", ann_id)
                     root_idx = [i for i,x in enumerate(words) if x == "ROOT"]
                     DBG( "ROOT", root_idx )

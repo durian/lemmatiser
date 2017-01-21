@@ -13,49 +13,48 @@ def DBG(*strs):
         print( "DBG:", strs, file=sys.stderr ) # use *strs for nicer strings
         
 '''
+DESCRIPTION
+-----------
 Counts statistics on brat .txt and .ann files
 
-USAGE: specify the *txt files (wildcards are expanded):
-  python3 bratstats.py -f "thuc.hist_gk.brat.book6*.txt"
+USAGE
+-----
+specify the *txt files (wildcards are expanded):
+ python3 bratstats.py -f "thuc.hist_gk.brat.book6*.txt"
 
 For each .txt file, an .ann file is expected.
 
-# ----
+OPTIONS
+-------
+ -f: the file(s) to process
+ -D: debug output
+ -0: only print statistics which are > 0
 
-Dit is een lijstje met aantallen die ik graag zou willen weten:
+EXAMPLE
+-------
+python3 bratstats.py -f "thuc.hist_gk.brat.book6.chap008.txt"  -0
+---- FILE: thuc.hist_gk.brat.book6.chap008.txt
+thuc.hist_gk.brat.book6.chap008.txt
+Aantal zinnen                                          4
+Aantal woorden                                       199
+---- FILE: thuc.hist_gk.brat.book6.chap008.ann
 
-number of words
-number of sentences
-number of complements
-
-number of complements that contain a root
-(like this inthuc.hist_gk.brat.book7.chap048.ann:
-T32	Complement 843 846;851 873;874 972;973 1178	οὐκ ἀπάξειν τὴν στρατιάν . ROOT εὖ γὰρ εἰδέναι ὅτι Ἀθηναῖοι σφῶν ταῦτα οὐκ ἀποδέξονται , ὥστε μὴ αὐτῶν ψηφισαμένων ἀπελθεῖν . ROOT καὶ γὰρ οὐ τοὺς αὐτοὺς ψηφιεῖσθαί τε περὶ σφῶν καὶ τὰ πράγματα ὥσπερ καὶ αὐτοὶ ὁρῶντας καὶ οὐκ ἄλλων ἐπιτιμήσει ἀκούσαντας γνώσεσθαι , ἀλλ' ἐξ ὧν ἄν τις εὖ λέγων διαβάλλοι , ἐκ τούτων αὐτοὺς πείσεσθαι
-)
-
-average number of word of complements, in general and for direct vs indirect complements
-
-number of direct complements
-number of indirect complements
-number of NP complements
-
-number of mixed complements
-
-do attitude verbs occur with direct complements?
-(T5    AttitudeEnt 263 268    ἔδοξε
- E1    AttitudeEnt:T5 report:T7
-)
-
-do δὴ and δή occur in complements? (mogen samen genomen worden)
-do γὰρ and γάρ occur in a complement after root (mogen samengenomen worden, hoeft niet per se meteen achter root, maar ergens daarna)
-
-# -----
-
-We should count both .txt and .ann files.
-
-The .txt files for the general statistics, number of sentences/words, etc.
-
-The .ann files to count the complements etc.
+STATISTICS
+python bratstats.py -f thuc.hist_gk.brat.book6.chap008.txt -0
+Aantal bestanden                                       1
+Aantal zinnen                                          4
+Aantal woorden                                       199
+Aantal 'Complement' annotaties                         8
+Aantal indirecte 'Complement' annotaties               5
+Aantal NP 'Complement' annotaties                      2
+Aantal preposedNP 'Complement' annotaties              1
+Aantal woorden in Complementen (met overlap)          54   6.75
+Aantal woorden in Complementen                        48   6.00
+Aantal woorden in indirecte Complementen              37   4.62
+Aantal woorden in NP Complementen                     13   1.62
+Aantal woorden in preposedNP Complementen              4   0.50
+Aantal Complements met speech entity                   1
+Aantal Complements met attitude entity                 7
 '''
 
 class Complement:

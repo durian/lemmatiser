@@ -92,9 +92,10 @@ def overlap(x1,x2,y1,y2):
 
 filenames = [] # Should be the *.txt files, and we figure out the .ann names from these
 filename  = None
+nozeroes  = False # specify -0 to only print statistics which are > 0
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "f:D", [])
+    opts, args = getopt.getopt(sys.argv[1:], "f:D0", [])
 except getopt.GetoptError as err:
     print(str(err))
     sys.exit(1)
@@ -103,6 +104,8 @@ for o, a in opts:
         filenames = sorted(glob.glob(a))
     elif o in ("-D"):
         debug = True
+    elif o in ("-0"):
+        nozeroes = True
     else:
         assert False, "unhandled option"
 
@@ -124,7 +127,6 @@ stats["compl_wc_pnp"] = 0 # preposedNP complements, word count
 stats["compl_owc"] = 0 # complements, overlap word count
 
 stats["compl_rc"] = 0 # complements spanning a ROOT element
-stats["compl_av"] = 0 # number of complements with attitude verb
 stats["compl_ae"] = 0 # number of complements with a attitude entity
 stats["compl_se"] = 0 # number of complements with a speech entity
 stats["compl_pe"] = 0 # number of complements with a perception entity
@@ -147,10 +149,14 @@ long["compl_wc_pnp"] = "Aantal woorden in preposedNP Complementen"
 long["compl_owc"] = "Aantal woorden in Complementen (met overlap)"
 
 long["compl_rc"] = "Aantal Complements met ROOT"
-long["compl_av"] = "Aantal Complements met attitude verb"
 long["compl_ae"] = "Aantal Complements met attitude entity"
 long["compl_se"] = "Aantal Complements met speech entity"
 long["compl_pe"] = "Aantal Complements met perception entity"
+
+long["contains_δὴ"] = "Aantal δὴ in complementen"
+long["contains_δή"] = "Aantal δή in complementen"
+long["contains_γάρ"] = "Aantal γάρ na ROOT in complementen"
+long["contains_γὰρ"] = "Aantal γὰρ na ROOT in complementen"
 # ----
 # Process
 # ----
@@ -241,14 +247,15 @@ for filename in filenames:
                         sys.exit(2)
                 stats["compl"] += 1
                 complements[ann_id].words = words # this includes "," etc
-                '''
                 complements[ann_id].roots = words.count("ROOT")
-                # words is the whole sentence BUG
+                '''
+                # words are counted later because we need to find the overlaps first
                 stats["compl_wc"] += (len(words) - complements[ann_id].roots)
                 '''
-                # Count these
+                # Count these, in all the words
                 complements[ann_id].contains["δὴ"] += words.count("δὴ")
                 complements[ann_id].contains["δή"] += words.count("δή")
+                
                 # γὰρ and γάρ occur in a complement after root
                 if words.count("ROOT") > 0:
                     DBG("ROOTS > 0", ann_id)
@@ -263,11 +270,11 @@ for filename in filenames:
                     complements[ann_id].contains["γὰρ"] += words.count("γὰρ")
                     complements[ann_id].contains["γάρ"] += words.count("γάρ")
                 
-            # We build up the Complements first, count when file is done
+            # We try to fill in the type. If the Complement is not known yet, we
+            # save the type for later.
             if ann_type == "compl-type":
                 # compl-type T6 indirect
-                # print( bits )
-                compl_id   = ann_info[1] #points to the Complement id (could be unused chunk)
+                compl_id   = ann_info[1] # points to the Complement id (could be unused chunk)
                 compl_type = ann_info[2]
                 DBG("TYPE", compl_id, compl_type)
                 try:
@@ -277,17 +284,17 @@ for filename in filenames:
                     DBG("COMPLEMENT ID FOR TYPE NOT FOUND", compl_id)
                     compl_types[ann_id] = [ compl_type ] #save for later
 
-            # head info
-            # T20	Compl-head 197 204	ἐσῆλθον
-            # R5	compl-head Arg1:T20 Arg2:T18
+            # head info, look slike:
+            #  T20	Compl-head 197 204	ἐσῆλθον
+            #  R5	compl-head Arg1:T20 Arg2:T18
             # Here we scan positions, using Arg1/Arg2 is maybe easier, but Compl-head
-            # still needs to be scanned to get the head-word itself.
+            # still needs to be processed to get the head-word itself.
             if ann_id[0] == "T" and ann_type == "Compl-head": # uppercase Compl is enough?
-                # scan the span, and see in which complement it occurs.
+                # Scan the span, and see in which complement it occurs.
                 span = ann_info[1:] # The numbers after "Compl-head"
                 span0 = int(span[0])
                 span1 = int(span[1])
-                #print( ann_info, span0, span1 )
+                DBG( "HEAD", ann_info, span0, span1 )
                 # Find the Complement (try them all as we don't know the order in the .ann file)
                 for c_id in complements:
                     c = complements[c_id]
@@ -465,7 +472,18 @@ for filename in filenames:
 
 print( "\nSTATISTICS" )
 print("python", " ".join(sys.argv))
-for stat, count in sorted(stats.items()):
+for stat in [ 'fc', 'sc', 'wc',
+                  'compl', 'compl_d', 'compl_i', 'compl_np', 'compl_pnp',
+                  'compl_owc', 'compl_wc',
+                  'compl_wc_d', 'compl_wc_i', 'compl_wc_np', 'compl_wc_pnp',
+                  'compl_se', 'compl_pe', 
+                  'compl_ae',
+                  'compl_rc',
+                  'contains_δὴ', 'contains_δή', 'contains_γάρ', 'contains_γὰρ']:
+    count = stats[stat]
+    if count == 0 and nozeroes:
+        continue
+#for stat, count in sorted(stats.items()):
     if stat.startswith("compl_wc") or stat.startswith("compl_owc"):
         average = float(count) / stats["compl"]
         try:
@@ -477,3 +495,16 @@ for stat, count in sorted(stats.items()):
             print( "{0:<50} {1:>5n} ".format(long[stat], count) )
         except KeyError:
             print( "# {0:<48} {1:>5n} ".format(stat, count) )
+'''
+# Show left overs.
+for stat in [ 'fc', 'sc', 'wc',
+                  'compl', 'compl_d', 'compl_i', 'compl_np', 'compl_pnp',
+                  'compl_owc', 'compl_wc',
+                  'compl_wc_d', 'compl_wc_i', 'compl_wc_np', 'compl_wc_pnp',
+                  'compl_se', 'compl_pe', 
+                  'compl_ae',
+                  'compl_rc',
+                  'contains_δὴ', 'contains_δή', 'contains_γάρ', 'contains_γὰρ']:
+    del stats[stat]
+print( stats.keys() )
+'''

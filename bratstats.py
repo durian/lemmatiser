@@ -24,15 +24,22 @@ specify the *txt files (wildcards are expanded):
 
 For each .txt file, an .ann file is expected.
 
+OUTPUT
+------
+
+Print info for each file to the screen, aggregated statistics
+are printed at the end.
+
 OPTIONS
 -------
  -f: the file(s) to process
  -D: debug output
  -0: only print statistics which are > 0
 
-EXAMPLE
--------
-python3 bratstats.py -f "thuc.hist_gk.brat.book6.chap008.txt"  -0
+EXAMPLE RUN AND OUTPUT
+----------------------
+python3 bratstats.py -f "thuc.hist_gk.brat.book6.chap008.txt" -0
+
 ---- FILE: thuc.hist_gk.brat.book6.chap008.txt
 thuc.hist_gk.brat.book6.chap008.txt
 Aantal zinnen                                          4
@@ -484,7 +491,18 @@ for stat in [ 'fc', 'sc', 'wc',
         continue
 #for stat, count in sorted(stats.items()):
     if stat.startswith("compl_wc") or stat.startswith("compl_owc"):
-        average = float(count) / stats["compl"]
+        if stat == "compl_wc":
+            average = float(count) / stats["compl"]
+        elif stat == "compl_wc_d":
+                average = float(count) / stats["compl_d"]
+        elif stat == "compl_wc_i":
+                average = float(count) / stats["compl_i"]
+        elif stat == "compl_wc_np":
+                average = float(count) / stats["compl_np"]
+        elif stat == "compl_wc_pnp":
+                average = float(count) / stats["compl_pnp"]
+        else:
+            average = float(count) / stats["compl"]
         try:
             print( "{0:<50} {1:>5n} {2:>6.2f}".format(long[stat], count, average) )
         except KeyError:

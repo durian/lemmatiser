@@ -491,18 +491,22 @@ for stat in [ 'fc', 'sc', 'wc',
         continue
 #for stat, count in sorted(stats.items()):
     if stat.startswith("compl_wc") or stat.startswith("compl_owc"):
-        if stat == "compl_wc":
-            average = float(count) / stats["compl"]
-        elif stat == "compl_wc_d":
-                average = float(count) / stats["compl_d"]
-        elif stat == "compl_wc_i":
-                average = float(count) / stats["compl_i"]
-        elif stat == "compl_wc_np":
-                average = float(count) / stats["compl_np"]
-        elif stat == "compl_wc_pnp":
-                average = float(count) / stats["compl_pnp"]
-        else:
-            average = float(count) / stats["compl"]
+        try:
+            if stat == "compl_wc":
+                average = float(count) / stats["compl"]
+            elif stat == "compl_wc_d":
+                    average = float(count) / stats["compl_d"]
+            elif stat == "compl_wc_i":
+                    average = float(count) / stats["compl_i"]
+            elif stat == "compl_wc_np":
+                    average = float(count) / stats["compl_np"]
+            elif stat == "compl_wc_pnp":
+                    average = float(count) / stats["compl_pnp"]
+            else:
+                average = float(count) / stats["compl"]
+        except ZeroDivisionError:
+            # stats[...] is 0
+            average = 0
         try:
             print( "{0:<50} {1:>5n} {2:>6.2f}".format(long[stat], count, average) )
         except KeyError:

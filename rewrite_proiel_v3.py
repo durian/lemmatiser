@@ -4,6 +4,7 @@
 # 2016-06-15 Adapted for new greek_Haudag.pcases.lemma.lex
 # 2017-01-07 New version 3 with new rewrite rules
 # 2017-01-08 Fixes
+# 2017-01-27 More small fixes
 
 import re
 import getopt, sys, os
@@ -59,6 +60,8 @@ for o, a in opts:
     else:
         assert False, "unhandled option"
 
+print( "GREEK HAUDAG FILE:", afile, file=sys.stderr )
+print( "PERSEUS WLT FILE: ", pfile, file=sys.stderr )
 
 # This is a one time thing, we read pwlt and keep it in memory. Unicode normalisation,
 # ἀάατον ἀάατος A--s---fa-
@@ -77,12 +80,13 @@ with open(pfile, 'r') as f:
         e = w + " " + l
         if e not in perseus:
             perseus[e] = t
+print( pfile, "contains", len(perseus), "unique entries.", file=sys.stderr )
 
-print( "Perseus contains", len(perseus), "unique entries.", file=sys.stderr )
-
+print( "REWRITING", afile, file=sys.stderr )
 # Count NOPE and other entries
 nope_cnt = 0
 skipped  = 0
+checked_in_perseus = 0
 df_is_g_in_p = 0
 with open(afile, 'r') as f:
     for l in f:
@@ -91,16 +95,16 @@ with open(afile, 'r') as f:
         # Ῥωμαῖοι	Ῥωμαῖος	A--p---mnp-i	2
         if len(bits) != 4:
             skipped += 1
-            print( "SKIP:", l, file=sys.stderr )
+            print( "SKIP:", l, "[wrong number of elements]", file=sys.stderr )
             continue
         if bits[1] == "NOPE": #hier was geen lemma beschikbaar
             nope_cnt += 1
-            print( "NOPE:", l, file=sys.stderr )
+            print( "NOPE:", l, "[lemma is NOPE]", file=sys.stderr )
             continue
         word  = normalize('NFC', bits[0])
         lemma = normalize('NFC', bits[1])
         tags  = bits[2:]
-        # We hved (had?) more tag-freq pairs per entry, so we enumerate.
+        # We have (had?) more tag-freq pairs per entry, so we enumerate.
         for n, k in enumerate(tags[:-1]):
             t = tags[n]    #tag
             f = tags[n+1]  #freq
@@ -119,6 +123,7 @@ with open(afile, 'r') as f:
                     e = word + " " + lemma
                     if e in perseus:
                         perseus_tag = perseus[e]
+                        checked_in_perseus += 1
                         if perseus_tag[0] == "G":
                            t = "G"+t[1:]
                            df_is_g_in_p += 1
@@ -137,4 +142,5 @@ with open(afile, 'r') as f:
 
 sys.stderr.write("Skipped {0:4n} entries\n".format(skipped))
 sys.stderr.write("Skipped {0:4n} NOPEs\n".format(nope_cnt))
-sys.stderr.write("Found   {0:4n} Df/G/Perseus\n".format(df_is_g_in_p))
+sys.stderr.write("Checked {0:4n} entries in Perseus\n".format(checked_in_perseus))
+sys.stderr.write("Found   {0:4n} Df/G entries in Perseus\n".format(df_is_g_in_p))

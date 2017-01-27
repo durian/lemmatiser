@@ -492,14 +492,16 @@ for filename in filenames:
 
 print( "\nSTATISTICS" )
 print("python", " ".join(sys.argv))
-for stat in [ 'fc', 'sc', 'wc',
-                  'compl', 'compl_d', 'compl_i', 'compl_np', 'compl_pnp',
+for stat in [ 'fc', 'sc', 'wc', "LF",
+                  'compl', 'compl_d', 'compl_i', 'compl_np', 'compl_pnp', 'compl_rc', "LF", 
                   'compl_owc', 'compl_wc',
-                  'compl_wc_d', 'compl_wc_i', 'compl_wc_np', 'compl_wc_pnp',
-                  'count_se', 'count_pe', 'count_ae',
-                  'compl_se', 'compl_pe', 'compl_ae',
-                  'compl_rc',
+                  'compl_wc_d', 'compl_wc_i', 'compl_wc_np', 'compl_wc_pnp', "LF",
+                  'count_se', 'count_pe', 'count_ae', "LF",
+                  'compl_se', 'compl_pe', 'compl_ae', "LF",
                   'contains_δὴ', 'contains_δή', 'contains_γάρ', 'contains_γὰρ' ]:
+    if stat == "LF":
+        print( "#" )
+        continue
     count = stats[stat]
     if count == 0 and nozeroes:
         continue

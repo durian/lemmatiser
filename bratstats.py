@@ -137,6 +137,10 @@ stats["compl_ae"] = 0 # number of complements with a attitude entity
 stats["compl_se"] = 0 # number of complements with a speech entity
 stats["compl_pe"] = 0 # number of complements with a perception entity
 
+stats["count_ae"] = 0 # number of attitude entity annotations
+stats["count_se"] = 0 # number of speech entity annotations
+stats["count_pe"] = 0 # number of perception entity annotations
+
 long = {}
 long["fc"] = "Aantal bestanden"
 long["wc"] = "Aantal woorden"
@@ -158,6 +162,10 @@ long["compl_rc"] = "Aantal Complements met ROOT"
 long["compl_ae"] = "Aantal Complements met attitude entity"
 long["compl_se"] = "Aantal Complements met speech entity"
 long["compl_pe"] = "Aantal Complements met perception entity"
+
+long["count_ae"] = "Aantal attitude entities"
+long["count_se"] = "Aantal speech entities"
+long["count_pe"] = "Aantal perception entities"
 
 long["contains_δὴ"] = "Aantal δὴ in complementen"
 long["contains_δή"] = "Aantal δή in complementen"
@@ -318,8 +326,12 @@ for filename in filenames:
 
             #  E1    AttitudeEnt:T5 report:T7
             # These are saved and processed later
+            # Note that they can be attached to more than one complement, so the
+            # counts of entities in complements can be higher than the absolute
+            # counts (e.g in thuc.hist_gk.brat.book6.chap006.ann).
             if ann_id[0] == "E" and ann_type[0:11] == "AttitudeEnt":
                 attitudes[ann_id] = ann_info # ['AttitudeEnt:T20', 'report:T21']
+                stats["count_ae"] += 1 # global count we do here
                 DBG("ATTITUDE ENTITY", ann_id, ann_info )
 
             #  T7      PerceptionEnt 612 619   ὁρῶντες
@@ -327,6 +339,7 @@ for filename in filenames:
             # These are saved and processed later
             if ann_id[0] == "E" and ann_type[0:13] == "PerceptionEnt":
                 perceptions[ann_id] = ann_info # ['PerceptionEnt:T20', 'report:T21']
+                stats["count_pe"] += 1 # global count we do here
                 DBG("PERCEPTION ENTITY", ann_id, ann_info )
 
             # T15     SpeechEnt 461 464       ἔφη
@@ -334,6 +347,7 @@ for filename in filenames:
             # These are saved and processed later
             if ann_id[0] == "E" and ann_type[0:9] == "SpeechEnt":
                 speechents[ann_id] = ann_info # ['SpeechEnt:T20', 'report:T21']
+                stats["count_se"] += 1 # global count we do here
                 DBG("SPEECH ENTITY", ann_id, ann_info )
 
     # Complements for this file, and add to the global statistics, check if we have a
@@ -482,10 +496,10 @@ for stat in [ 'fc', 'sc', 'wc',
                   'compl', 'compl_d', 'compl_i', 'compl_np', 'compl_pnp',
                   'compl_owc', 'compl_wc',
                   'compl_wc_d', 'compl_wc_i', 'compl_wc_np', 'compl_wc_pnp',
-                  'compl_se', 'compl_pe', 
-                  'compl_ae',
+                  'count_se', 'count_pe', 'count_ae',
+                  'compl_se', 'compl_pe', 'compl_ae',
                   'compl_rc',
-                  'contains_δὴ', 'contains_δή', 'contains_γάρ', 'contains_γὰρ']:
+                  'contains_δὴ', 'contains_δή', 'contains_γάρ', 'contains_γὰρ' ]:
     count = stats[stat]
     if count == 0 and nozeroes:
         continue

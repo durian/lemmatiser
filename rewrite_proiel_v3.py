@@ -125,8 +125,8 @@ with open(afile, 'r') as f:
                         perseus_tag = perseus[e]
                         checked_in_perseus += 1
                         if perseus_tag[0] == "G":
-                           t = "G"+t[1:]
-                           df_is_g_in_p += 1
+                            t = "G"+t[1:]
+                            df_is_g_in_p += 1
                         else: # if in perseus, but not G, D- like the rest of the D*
                             t = "D-"+t[2:]
                     else: # if not in perseus, D- like the rest of the D*
